@@ -1,6 +1,6 @@
 # Thetis UI source-surface inventory
 
-Date: 2026-11-08. This is a static discovery inventory for the [reconstruction design](<D:/workspace/Thetis/docs/superpowers/specs/2026-11-08-code-oss-ui-reconstruction-design.md>) and [milestone plan](<D:/workspace/Thetis/docs/superpowers/plans/2026-11-08-code-oss-ui-reconstruction.md>). It is not an interaction-level parity certificate.
+Date: 2026-11-08. Triage decisions belong to Step 01; cross-cutting helpers are implemented with their owning feature. Numeric owners refer to the current ten-step baseline. This is a static discovery inventory for the [reconstruction design](<D:/workspace/Thetis/docs/superpowers/specs/2026-11-08-code-oss-ui-reconstruction-design.md>) and [step plan](<D:/workspace/Thetis/docs/superpowers/plans/2026-11-08-code-oss-ui-reconstruction.md>). It is not an interaction-level parity certificate.
 
 ## Scope and method
 
@@ -10,16 +10,16 @@ Observed: **236 project-listed C# files**, **56 distinct Form-derived class name
 
 Designer observations below count unique variable assignments to known WinForms/control-derived constructors in files containing InitializeComponent. Event observations count syntactic event hookups. Counts include labels, menus and containers, may include non-designer code in those files, and are not numbers of independent features. Setup pages may be hidden/removed according to model or driver capabilities.
 
-## Form candidates and proposed editor milestone
+## Form candidates and proposed editor step
 
-| Class | Source declaration | Milestone | Classification / ownership |
+| Class | Source declaration | Step | Classification / ownership |
 |---|---|---|---|
 | AmpView | [AmpView.cs](<D:/workspace/Thetis/Project Files/Source/Console/AmpView.cs:58>) | 7 | PureSignal plots |
 | AndromedaEditForm | [AndromedaEditForm.cs](<D:/workspace/Thetis/Project Files/Source/Console/Andromeda/AndromedaEditForm.cs:36>) | 9 | Hardware-panel configuration |
 | BandButtonsPopup | [BandButtonsPopup.cs](<D:/workspace/Thetis/Project Files/Source/Console/Andromeda/BandButtonsPopup.cs:36>) | 9 | Reusable band commands |
 | CATTester | [CATTester.cs](<D:/workspace/Thetis/Project Files/Source/Console/CAT/CATTester.cs:13>) | 9 | CAT diagnostics |
 | ColorPanel | [ColorButton.cs](<D:/workspace/Thetis/Project Files/Source/Console/ColorButton.cs:191>) | 8 | Color chooser helper |
-| Console | [console.cs](<D:/workspace/Thetis/Project Files/Source/Console/console.cs:85>) | 3-5, 8 | Main operational surface; service extraction starts at milestone 2 |
+| Console | [console.cs](<D:/workspace/Thetis/Project Files/Source/Console/console.cs:85>) | 3-5, 8 | Main operational surface; service extraction starts at Step 02 |
 | cwedit | [cwedit.cs](<D:/workspace/Thetis/Project Files/Source/Console/cwedit.cs:50>) | 6 | CW message editing |
 | CWX | [cwx.cs](<D:/workspace/Thetis/Project Files/Source/Console/cwx.cs:69>) | 6 | Queued CW and backend timing |
 | DisplaySettingsForm | [displaysettingsform.cs](<D:/workspace/Thetis/Project Files/Source/Console/Andromeda/displaysettingsform.cs:40>) | 9 | Reuses display settings |
@@ -73,7 +73,7 @@ Designer observations below count unique variable assignments to known WinForms/
 
 ## UserControl candidates
 
-| Class | Source declaration | Milestone |
+| Class | Source declaration | Step |
 |---|---|---|
 | MidiDeviceSetup | [MidiDeviceSetup.cs](<D:/workspace/Thetis/Project Files/Source/Midi2Cat/Midi2Cat.IO/MidiDeviceSetup.cs:46>) | 9 |
 | ucBandwidthView | [ucBandwidthView.cs](<D:/workspace/Thetis/Project Files/Source/Console/ucBandwidthView.cs:48>) | 4 |
@@ -98,7 +98,7 @@ Custom primitives such as PrettyTrackBar, PanDisplay, ColorButton and thread-awa
 
 Paths are recovered from static Controls.Add relationships and Text labels. The fourteen unnamed-by-role tabPage variables belong to the meter/gadget settings editor; that ownership is shown explicitly below. Paths are candidate ownership labels, not a guarantee of visibility in every model. Source links point to object construction; associated behavior is in [setup.cs](<D:/workspace/Thetis/Project Files/Source/Console/setup.cs>).
 
-| Page variable | Ownership / label path | Proposed editor milestone | Source |
+| Page variable | Ownership / label path | Proposed editor step | Source |
 |---|---|---|
 | tpGeneral | Setup / General | 3 (required state: 2) | [designer](<D:/workspace/Thetis/Project Files/Source/Console/setup.designer.cs:211>) |
 | tpGeneralHardware | Setup / General / H/W Select | 3 (required state: 2) | [designer](<D:/workspace/Thetis/Project Files/Source/Console/setup.designer.cs:213>) |
@@ -246,7 +246,7 @@ The [Console designer](<D:/workspace/Thetis/Project Files/Source/Console/console
 
 ## Functional inventory beyond windows
 
-- [SpotManager2](<D:/workspace/Thetis/Project Files/Source/Console/SpotManager2.cs:54>) and [Console spot interactions](<D:/workspace/Thetis/Project Files/Source/Console/console.cs:48873>) belong to milestone 4, with final display variants in milestone 8. TCI/SWL spot lifetime, metadata, receiver-specific tuning/mode changes, lookup and outbound notifications require separate behavior rows.
+- [SpotManager2](<D:/workspace/Thetis/Project Files/Source/Console/SpotManager2.cs:54>) and [Console spot interactions](<D:/workspace/Thetis/Project Files/Source/Console/console.cs:48873>) belong to Step 04, with final display variants in Step 08. TCI/SWL spot lifetime, metadata, receiver-specific tuning/mode changes, lookup and outbound notifications require separate behavior rows.
 - [DisplayMode](<D:/workspace/Thetis/Project Files/Source/Console/enums.cs:134>) includes spectrum, panadapter, scope/scope2, phase/phase2, waterfall, histogram, panafall, panascope, spectrascope and off. Primary spectrum/waterfall is an early slice; the other modes remain parity work.
 - [MeterType](<D:/workspace/Thetis/Project Files/Source/Console/MeterManager.cs:178>) includes operating controls and recording/playback gadgets as well as measurements. Gadget behavior needs its own rows.
 - [Memory scheduling](<D:/workspace/Thetis/Project Files/Source/Console/Memory/MemoryForm.cs:1010>) and [PureSignal control](<D:/workspace/Thetis/Project Files/Source/Console/PSForm.cs:63>) demonstrate behavior owned by form lifetimes. Move the behavior to backend services before treating the replacement as a passive panel.
@@ -255,4 +255,4 @@ The [Console designer](<D:/workspace/Thetis/Project Files/Source/Console/console
 
 ## Next inventory expansion
 
-For each reachable surface, record separate rows for value edits, validation failures, mouse/digit/wheel behavior, context menus, keyboard actions, defaults/reset, Apply/Cancel, persistence, capability restrictions, external-controller updates and closing/reopening. Repeated controls can share a backend operation but retain separate interaction tests where semantics differ. This expansion is milestone 0 work; the present inventory provides the source-backed starting set.
+For each reachable surface, record separate rows for value edits, validation failures, mouse/digit/wheel behavior, context menus, keyboard actions, defaults/reset, Apply/Cancel, persistence, capability restrictions, external-controller updates and closing/reopening. Repeated controls can share a backend operation but retain separate interaction tests where semantics differ. This expansion is Step 01 work; the present inventory provides the source-backed starting set.

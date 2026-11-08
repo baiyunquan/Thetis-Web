@@ -1,6 +1,6 @@
 # Thetis Code OSS UI reconstruction: source analysis and proposed design
 
-Date: 2026-11-08. Status: proposed architecture and functional scope; implementation has not started.
+Date: 2026-11-08. Status: source architecture reference; implementation has not started. The [overall view and ten-step baseline][plan] is authoritative for current layout, step ownership and qualification. This reference preserves the original deeper source analysis; it is not a competing implementation roadmap.
 
 ## 1. Intent and agreed direction
 
@@ -8,7 +8,7 @@ Retain the Windows Forms frontend and build a new frontend consisting of a Code 
 
 The user selected Code workbench integration with custom panels/webviews. This does not require a fork of Code's internal widget system. Proposed extension, host-page and radio-panel sources belong in the parent repository, outside the upstream Code submodule. The existing TOTW frontend is not the implementation of these panels.
 
-For this proposal, **1:1 means functional parity**, including interaction semantics, validation, persistence, hardware effects, external control and recovery. Code controls layout, tabs and themes. Pixel-identical WinForms skins and identical native OS window behavior are not assumed. Any required visual compatibility should be made an explicit acceptance item rather than silently counted as functional parity.
+For this proposal, **1:1 means functional parity**, including interaction semantics, validation, persistence, hardware effects, external control and recovery. The current baseline also explicitly preserves original spatial relationships and implements legacy XML/PNG skin compatibility with reports for unsupported properties. Code controls native layout, tabs and themes. Pixel-identical Windows/browser rendering and identical OS-window behavior require separate evidence rather than an implicit promise.
 
 This is a substantial migration that can be divided into reviewable milestones. A completed early milestone is not a claim of full UI parity.
 
@@ -167,9 +167,9 @@ Add targeted managed/extension/browser checks for the changed feature and one co
 
 ## 9. Work sequence and remaining decisions
 
-The [implementation roadmap][plan] defines twelve milestones, including an initial inventory milestone. The first reconstructed operating surface is **essential Setup/Network plus the RX1 Console**, after the hosting and lifecycle foundations. The first auxiliary editors are **FilterForm, band stack and memory recall**, followed by audio/EQ/profiles and CW/recording. Advanced calibration, gadgets, peripheral editors and specialist forms follow explicit dependencies.
+The [overall view][plan] links exactly ten separate implementation plans. Step 01 combines baseline inventory with hosting/layout/skin foundations, Step 02 establishes backend lifecycle, and Step 03 reconstructs essential Setup/Network plus the main receiving Console. First auxiliary editors are FilterForm, band stack and memory recall, followed by audio/EQ/profiles and CW/recording. Advanced calibration, full skins/gadgets, peripheral editors and specialist forms follow. Qualification is embedded in every step, with no final qualification-only step.
 
-Pending implementation decisions are narrow and testable: verified loopback webview origin arrangement; secure LAN transport/legacy TCI coexistence; exact application DTOs and per-feature TCI/CAT coverage; hardware/browser qualification matrix; and whether any historical/manual-only or pixel-skin compatibility is required. None is evidence that implementation or full parity has already been achieved. No calendar estimate is reliable before the hosting and initial vertical-slice measurements.
+Pending implementation decisions are narrow and testable: verified loopback webview origins; secure LAN transport/legacy TCI coexistence; feature payload details within the defined shared envelope; per-feature TCI/CAT coverage; hardware/browser qualification matrix; and historical/manual-only or exact pixel-rendering requirements. Legacy skin import and original-proximity workbench placement are now explicit baseline work. None establishes implementation or full parity; calendar estimates need hosting and vertical-slice measurements.
 
 [inventory]: <D:/workspace/Thetis/docs/superpowers/specs/2026-11-08-code-oss-ui-source-inventory.md>
 [plan]: <D:/workspace/Thetis/docs/superpowers/plans/2026-11-08-code-oss-ui-reconstruction.md>
