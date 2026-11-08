@@ -1,0 +1,45 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Launch Thetis (Release)",
+            "type": "clr",
+            "request": "launch",
+            "preLaunchTask": "Build All (Release)",
+            "program": "${workspaceFolder}/Project Files/bin/x64/Release/Thetis.exe",
+            "args": ["-web"],
+            "cwd": "${workspaceFolder}/Project Files/bin/x64/Release",
+            "stopAtEntry": false,
+            "console": "internalConsole"
+        },
+        {
+            "name": "Launch Thetis (Debug)",
+            "type": "clr",
+            "request": "launch",
+            "preLaunchTask": "Build All (Debug)",
+            "program": "${workspaceFolder}/Project Files/bin/x64/Debug/Thetis.exe",
+            "args": [],
+            "cwd": "${workspaceFolder}/Project Files/bin/x64/Debug",
+            "stopAtEntry": false,
+            "console": "internalConsole"
+        },
+        {
+            "name": "Attach to Thetis (.NET)",
+            "type": "clr",
+            "request": "attach",
+            "processId": "${command:pickProcess}"
+        },
+        {
+            "name": "Debug Native Core (C++ / cppvsdbg)",
+            "type": "cppvsdbg",
+            "request": "launch",
+            "program": "${workspaceFolder}/Project Files/bin/x64/Release/Thetis.exe",
+            "args": ["-web"],
+            "stopAtEntry": false,
+            "cwd": "${workspaceFolder}/Project Files/bin/x64/Release",
+            "environment": [],
+            "console": "externalTerminal"
+        }
+    ]
+}
+

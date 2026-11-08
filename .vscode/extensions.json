@@ -1,0 +1,10 @@
+{
+    "recommendations": [
+        "ms-vscode.cmake-tools",
+        "ms-vscode.cpptools",
+        "ms-dotnettools.csharp",
+        "ms-dotnettools.csdevkit",
+        "twxs.cmake"
+    ]
+}
+

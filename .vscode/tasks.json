@@ -1,0 +1,107 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Build All (Release)",
+            "type": "shell",
+            "command": "powershell.exe",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "${workspaceFolder}/build.ps1",
+                "-All",
+                "-Config",
+                "Release"
+            ],
+            "group": {
+                "kind": "build",
+                "isDefault": true
+            },
+            "problemMatcher": "$msCompile",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Build All (Debug)",
+            "type": "shell",
+            "command": "powershell.exe",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "${workspaceFolder}/build.ps1",
+                "-All",
+                "-Config",
+                "Debug"
+            ],
+            "group": "build",
+            "problemMatcher": "$msCompile",
+            "presentation": {
+                "reveal": "always",
+                "panel": "shared"
+            }
+        },
+        {
+            "label": "Build Native Core Only (CMake)",
+            "type": "shell",
+            "command": "powershell.exe",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "${workspaceFolder}/build.ps1",
+                "-Config",
+                "Release"
+            ],
+            "group": "build",
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "Build C# Thetis Only (dotnet)",
+            "type": "shell",
+            "command": "dotnet",
+            "args": [
+                "build",
+                "${workspaceFolder}/Project Files/Source/Console/Thetis.csproj",
+                "-c",
+                "Release",
+                "-p:Platform=x64"
+            ],
+            "group": "build",
+            "problemMatcher": "$msCompile"
+        },
+        {
+            "label": "Clean Build Directory",
+            "type": "shell",
+            "command": "powershell.exe",
+            "args": [
+                "-NoProfile",
+                "-ExecutionPolicy",
+                "Bypass",
+                "-File",
+                "${workspaceFolder}/build.ps1",
+                "-Clean"
+            ],
+            "problemMatcher": []
+        },
+        {
+            "label": "Update Git Submodules",
+            "type": "shell",
+            "command": "git",
+            "args": [
+                "submodule",
+                "update",
+                "--init",
+                "--recursive"
+            ],
+            "problemMatcher": []
+        }
+    ]
+}
+

@@ -1,0 +1,47 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "x64-release",
+      "displayName": "x64 Release (Ninja + MSVC)",
+      "description": "Build 64-bit Release using Ninja and MSVC toolset",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/x64-release",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "STAGE_TO_PROJECT_BIN": true,
+        "ENABLE_MANAGED_BUILD": true
+      }
+    },
+    {
+      "name": "x64-debug",
+      "displayName": "x64 Debug (Ninja + MSVC)",
+      "description": "Build 64-bit Debug using Ninja and MSVC toolset",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/x64-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "STAGE_TO_PROJECT_BIN": true,
+        "ENABLE_MANAGED_BUILD": true
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "x64-release",
+      "displayName": "Build x64 Release",
+      "configurePreset": "x64-release"
+    },
+    {
+      "name": "x64-debug",
+      "displayName": "Build x64 Debug",
+      "configurePreset": "x64-debug"
+    }
+  ]
+}
+

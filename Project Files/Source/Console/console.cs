@@ -1041,6 +1041,10 @@ namespace Thetis
             {
                 // late start these, to give time for console to resize etc, because
                 // external app may ask for rx2 before expand/collapse sizes have been calculated
+                if (Common.HasArg(args, "-tci") || Common.HasArg(args, "-web") || Common.HasArg(args, "-webui"))
+                {
+                    SetupForm.EnableTCIServer();
+                }
                 SetupForm.StartupTCIServer();
                 SetupForm.StartupTCPIPcatServer();
             }
@@ -1317,6 +1321,7 @@ namespace Thetis
 
                 s += "  -help   this help\n\n";
                 s += "  -autostart         attempt to power on radio at start up\n";
+                s += "  -web / -tci        enable TCI server and WebUI on startup (http://localhost:50001)\n";
                 s += "  -cmasioconfig      show the cmASIO setup tab in audio setup\n";
                 s += "  -noinstancewarn    do not warn if other instances are running\n";
                 s += "  -nospec            do not use additional spectrum analysers from WDSP for filter item display\n";

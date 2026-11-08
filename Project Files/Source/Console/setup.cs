@@ -22516,6 +22516,10 @@ namespace Thetis
             lblToggleToUseTCI.Visible = false;
             console.SetupTCI(chkTCIServerListening.Checked, (int)udTCIRateLimit.Value);
         }
+        public void EnableTCIServer()
+        {
+            chkTCIServerListening.Checked = true;
+        }
         public void StartupTCIServer()
         {
             chkTCIServerListening_CheckedChanged(this, EventArgs.Empty);

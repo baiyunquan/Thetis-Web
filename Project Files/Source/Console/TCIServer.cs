@@ -1,4 +1,4 @@
-﻿/*  TCIServer.cs
+/*  TCIServer.cs
 
 This file is part of a program that implements a Software-Defined Radio.
 
@@ -1873,6 +1873,141 @@ namespace Thetis
             return false;
         }
 
+		private bool isWebSocketUpgradeRequest(string msg)
+		{
+			return Regex.IsMatch(msg, @"Upgrade:\s*websocket", RegexOptions.IgnoreCase) &&
+			       Regex.IsMatch(msg, @"Sec-WebSocket-Key:\s*(.+)", RegexOptions.IgnoreCase);
+		}
+
+		private void serveHttpContent(string msg)
+		{
+			try
+			{
+				string[] lines = msg.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
+				if (lines.Length == 0) return;
+				string requestLine = lines[0];
+				string[] parts = requestLine.Split(' ');
+				if (parts.Length < 2) return;
+
+				string rawPath = parts[1];
+				int qIdx = rawPath.IndexOf('?');
+				if (qIdx >= 0) rawPath = rawPath.Substring(0, qIdx);
+				int hIdx = rawPath.IndexOf('#');
+				if (hIdx >= 0) rawPath = rawPath.Substring(0, hIdx);
+
+				string decodedPath = Uri.UnescapeDataString(rawPath);
+				if (decodedPath == "/" || string.IsNullOrWhiteSpace(decodedPath))
+				{
+					decodedPath = "/totw.html";
+				}
+
+				string relativePath = decodedPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+				if (relativePath.Contains(".."))
+				{
+					sendHttpResponse(403, "Forbidden", "text/plain", Encoding.UTF8.GetBytes("403 Forbidden"));
+					return;
+				}
+
+				string baseDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "web");
+				if (!Directory.Exists(baseDir))
+				{
+					baseDir = AppDomain.CurrentDomain.BaseDirectory;
+				}
+
+				string filePath = Path.Combine(baseDir, relativePath);
+				if (!File.Exists(filePath))
+				{
+					if (relativePath.Equals("totw.html", StringComparison.OrdinalIgnoreCase))
+					{
+						string alt = Path.Combine(baseDir, "website", "index.html");
+						if (File.Exists(alt)) filePath = alt;
+					}
+				}
+
+				if (File.Exists(filePath))
+				{
+					byte[] fileBytes = File.ReadAllBytes(filePath);
+					string ext = Path.GetExtension(filePath).ToLowerInvariant();
+					string contentType = "application/octet-stream";
+					switch (ext)
+					{
+						case ".html":
+						case ".htm":
+							contentType = "text/html; charset=utf-8";
+							break;
+						case ".js":
+							contentType = "application/javascript; charset=utf-8";
+							break;
+						case ".css":
+							contentType = "text/css; charset=utf-8";
+							break;
+						case ".json":
+							contentType = "application/json; charset=utf-8";
+							break;
+						case ".png":
+							contentType = "image/png";
+							break;
+						case ".jpg":
+						case ".jpeg":
+							contentType = "image/jpeg";
+							break;
+						case ".gif":
+							contentType = "image/gif";
+							break;
+						case ".svg":
+							contentType = "image/svg+xml";
+							break;
+						case ".ico":
+							contentType = "image/x-icon";
+							break;
+						case ".woff":
+							contentType = "font/woff";
+							break;
+						case ".woff2":
+							contentType = "font/woff2";
+							break;
+						case ".wav":
+							contentType = "audio/wav";
+							break;
+						case ".webm":
+							contentType = "audio/webm";
+							break;
+					}
+
+					sendHttpResponse(200, "OK", contentType, fileBytes);
+				}
+				else
+				{
+					string notFoundHtml = "<html><head><title>404 Not Found</title></head><body><h1>404 Not Found</h1><p>The requested file was not found on Thetis Web server.</p></body></html>";
+					sendHttpResponse(404, "Not Found", "text/html; charset=utf-8", Encoding.UTF8.GetBytes(notFoundHtml));
+				}
+			}
+			catch (Exception ex)
+			{
+				Debug.Print("serveHttpContent error: " + ex.Message);
+			}
+		}
+
+		private void sendHttpResponse(int statusCode, string statusText, string contentType, byte[] body)
+		{
+			try
+			{
+				StringBuilder sb = new StringBuilder();
+				sb.Append($"HTTP/1.1 {statusCode} {statusText}\r\n");
+				sb.Append($"Content-Type: {contentType}\r\n");
+				sb.Append($"Content-Length: {body.Length}\r\n");
+				sb.Append("Connection: close\r\n");
+				sb.Append("Access-Control-Allow-Origin: *\r\n");
+				sb.Append("\r\n");
+
+				byte[] headerBytes = Encoding.UTF8.GetBytes(sb.ToString());
+				m_stream.Write(headerBytes, 0, headerBytes.Length);
+				m_stream.Write(body, 0, body.Length);
+				m_stream.Flush();
+			}
+			catch { }
+		}
+
 		private bool upgradeToWebSocket(string msg)
         {
 			bool bRet;
@@ -2853,14 +2988,19 @@ namespace Thetis
                             string msg = Encoding.UTF8.GetString(bufferedBytes, 0, nStart);
                             if (Regex.IsMatch(msg, "^GET", RegexOptions.IgnoreCase))
 							{
-
-								if (upgradeToWebSocket(msg))
+								if (isWebSocketUpgradeRequest(msg) && upgradeToWebSocket(msg))
 								{
 									m_bWebSocket = true;
 									Debug.Print("Upgraded to websocket");
 
                                     _m_buffer.RemoveRange(0, nStart);
 									sendInitialisationData();
+								}
+								else if (!isWebSocketUpgradeRequest(msg))
+								{
+									serveHttpContent(msg);
+									_m_buffer.RemoveRange(0, nStart);
+									m_stopClient = true;
 								}
 								else
 								{

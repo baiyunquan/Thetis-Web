@@ -1,0 +1,17 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}",
+    "cmake.buildDirectory": "${workspaceFolder}/build",
+    "cmake.configureOnOpen": false,
+    "dotnet.defaultSolution": "${workspaceFolder}/Project Files/Source/Console/Thetis.csproj",
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "files.exclude": {
+        "**/.git": true,
+        "**/.svn": true,
+        "**/.hg": true,
+        "**/CVS": true,
+        "**/.DS_Store": true,
+        "**/Thumbs.db": true,
+        "**/.vs": true,
+        "**/obj": true
+    }
+}
