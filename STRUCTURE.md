@@ -373,3 +373,300 @@ Thetis/
         ├── totw.html                        # 独立单文件 WebUI 客户端
         └── website/                         # 拆分版本源码 (CSS/JS)
 ```
+
+
+---
+
+## 6. Windows Forms 界面窗口全景剖析 (WinForms Catalog)
+
+Thetis 的桌面图形界面基于经典高效的 Windows Forms (WinForms) 技术构建，采用双缓冲防撕裂渲染 (`Common.DoubleBufferAll`)、动态 DPI 缩放适配 (`clsDPISafeTools`)、DWM 桌面窗口合成特效与自定义矢量皮肤系统 (`clsThetisSkinService`)。
+
+经对代码库的完整遍历检索，项目中共有 **56 个独立的 WinForms 窗口类**（继承自 `System.Windows.Forms.Form`）。按业务功能体系划分为以下十大类别：
+
+---
+
+### 6.1 主控制台与程序生命周期窗口 (Main Console & Lifecycle)
+
+1. **`Console`** ([console.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/console.cs), [Andromeda.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Andromeda/Andromeda.cs))
+   - **窗口职责**：Thetis 的核心主控制台窗口，也是整个软件的启动和运行总控枢纽。
+   - **核心功能**：
+     - 呈现双 VFO (VFO A / VFO B) 频率数字滚轮与频率微调刻度；
+     - 集成 SharpDX 硬件加速渲染的全景频谱图 (Panadapter) 与高帧率色彩瀑布流 (Waterfall)；
+     - 调制模式切换 (LSB, USB, DSB, CWL, CWU, FMN, AM, SAM, SPEC, DIGL, DIGU, DRM)；
+     - 接收滤波器通带快速切换按键 (6K, 4K, 2.8K, 2.4K, 2.1K, 1.8K, 1.0K, 500, 250, 100, 50Hz, VAR1, VAR2)；
+     - 收发状态控制 (MOX 手动发射, VOX 声控发射, TUNE 调谐载波输出, MUT 静音, DUP 全双工监听)；
+     - 射频增益 (ATT/Preamp)、音频音量 (AF)、驱动功率 (Drive)、AGC 特性 (Off/Long/Slow/Med/Fast/Custom)；
+     - 模拟指针式与数字式 S-Meter / 功率表 / ALC 动态表头；
+     - 协调所有子窗口的停靠、弹出与隐藏。
+2. **`Splash`** ([splash.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/splash.cs))
+   - **窗口职责**：启动初始画面闪屏 (Splash Screen)。
+   - **核心功能**：在后台加载大型依赖库、探测硬件网络、初始化 Direct3D 设备与计算 FFTW Wisdom 计划期间显示进度条与当前加载阶段提示，防止用户误判为程序卡死。
+3. **`ShutdownForm`** ([ShutdownForm.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/ShutdownForm.cs))
+   - **窗口职责**：安全关闭等待窗口。
+   - **核心功能**：程序退出时显示平滑注销进度，确保依次完成：保存当前电台频段配置到 XML/数据库、停止发射状态机、释放 ASIO 与 PortAudio 音频句柄、注销 UDP 接收套接字并停止 MMCSS 线程调度。
+4. **`frmAbout`** ([frmAbout.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmAbout.cs))
+   - **窗口职责**：关于信息视窗 (About Thetis)。
+   - **核心功能**：显示当前程序版本号、修订版 Git 提交标识、编译架构 (x64)、开源许可协议 (GPL v2 及双重许可声明) 以及 OpenHPSDR、TAPR、Warren Pratt (NR0V)、Richie (MW0LGE) 等核心贡献者致谢列表。
+5. **`Progress`** ([progress.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/progress.cs))
+   - **窗口职责**：通用模态进度条对话框。
+   - **核心功能**：为耗时操作（如固件检测、大批量数据迁移、滤波表重计算）提供带有取消按钮的百分比进度指示。
+6. **`InputBox`** ([InputBox.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/InputBox.cs))
+   - **窗口职责**：轻量级单行文本输入对话框。
+   - **核心功能**：在用户创建新预设、重命名波段、修改信道标签或自定义快捷键时获取用户输入。
+
+---
+
+### 6.2 全局系统与硬件设置窗口 (Global Setup & Radio Configuration)
+
+7. **`Setup`** ([setup.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/setup.cs))
+   - **窗口职责**：全局综合参数配置主对话框 (Thetis Setup)。
+   - **核心功能**：包含数十个功能分页，为 Thetis 最庞大的设置中枢：
+     - **General**：硬件型号选择 (Hermes, ANAN-10/100/200/7000/8000 等)、校准常数、ADC/DAC 时钟基准微调；
+     - **Audio**：主音频驱动引擎切换 (cmASIO / PortAudio / MME / WASAPI)、缓冲区采样点大小 (Sample Rate & Buffer Size) 调整、VAC (虚拟音频电缆) 路由重定向；
+     - **Display**：DirectX 11 垂直同步、帧率限制、瀑布流渐变色谱映射表、频谱动态范围 (Min/Max dBm)；
+     - **DSP**：WDSP 算法参数、NR/ANF 自适应滤波阶数、AGC 衰减斜率与挂起门限；
+     - **Transmit**：PA 偏置电压调谐、10 段发射均衡器、微麦克风前置放大、VOX 灵敏度；
+     - **CAT Control & TCI**：虚拟串口映射、Kenwood CAT 指令端口、TCI 服务器开关 (端口 50001)；
+     - **Antenna**：多天线端口 (ANT1/ANT2/ANT3/RX_ONLY) 在不同频段下的自动路由继电器矩阵。
+8. **`SelectFormsForReposition`** ([setup.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/setup.cs))
+   - **窗口职责**：窗口位置批量管理辅助窗。
+   - **核心功能**：在多显示器或分辨率发生剧烈变化时，列出系统中所有游离在屏幕外部的子窗口，支持一键批量居中与坐标重置。
+9. **`frmAddCustomRadio`** ([frmAddCustomRadio.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmAddCustomRadio.cs))
+   - **窗口职责**：自定义电台硬件手动添加对话框。
+   - **核心功能**：允许在跨网段或禁止广播的环境下，手动输入 SDR 硬件的指定 IP 地址、子网掩码、MAC 地址与型号，绕过自动 UDP 发现机制建立直连。
+10. **`frmIPv4Picker`** ([frmIPv4Picker.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmIPv4Picker.cs))
+    - **窗口职责**：本地物理网卡 IPv4 地址拾取对话框。
+    - **核心功能**：列出本机所有的网络适配器，让用户明确指定与 SDR 硬件直连的物理千兆网卡，避免以太网数据流被虚拟网卡或 Wi-Fi 劫持。
+11. **`frmSerialPortPicker`** ([frmSerialPortPicker.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmSerialPortPicker.cs))
+    - **窗口职责**：COM 串口选择器窗口。
+    - **核心功能**：扫描系统中的物理 RS-232 串口与虚拟串口对 (com0com / VSP)，为外部 CAT 控制或 PTT 脚踏板指定端口号。
+
+---
+
+### 6.3 数字信号处理、滤波与高级 RF 算法窗口 (DSP, Filtering & Advanced RF)
+
+12. **`PSForm`** ([PSForm.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/PSForm.cs))
+    - **窗口职责**：PureSignal 自适应数字预失真 (Adaptive DPD) 控制与校准主窗口。
+    - **核心功能**：采集发射功放定向耦合器反馈采样的基带射频信号，实时自适应计算功放的非线性传递逆函数，动态抑制三阶/五阶互调失真 (IMD)，使功放线性度提升 20dB~30dB。支持内置双音频信号发生器 (Two-Tone Generator) 与单键校准 (Calibrate)。
+13. **`AmpView`** ([AmpView.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/AmpView.cs))
+    - **窗口职责**：功率放大器非线性特性曲线监控视窗 (Amplifier Transfer Characteristic View)。
+    - **核心功能**：与 `PSForm` 配合，以图形化直角坐标系实时绘制功放的 AM-AM（幅度失真）与 AM-PM（相位失真）特性曲线，展示预失真校正前后的对比效果。
+14. **`EQForm`** ([eqform.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/eqform.cs))
+    - **窗口职责**：接收与发射音频 10 段图示/参数均衡器 (Equalizer)。
+    - **核心功能**：提供从 31Hz 到 16kHz 的 10 个频段增益滑动推子，独立调节 RX 接收音频的听感清晰度与 TX 发射话音的通透度/饱满度，支持预设保存与即时重置。
+15. **`FilterForm`** ([FilterForm.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/FilterForm.cs))
+    - **窗口职责**：接收机滤波器边界微调窗口。
+    - **核心功能**：微调当前模式下的低端截止频率 (Low Cut) 与高端截止频率 (High Cut)，调节 DSP FIR 滤波器的倾斜因子 (Steepness Factor)。
+16. **`frmFilterManager`** ([frmFilterManager.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmFilterManager.cs))
+    - **窗口职责**：多模式滤波器方案预设管理器。
+    - **核心功能**：集中管理 SSB、CW、AM 等各调制模式下快捷滤波按键 (VAR1/VAR2) 的默认通带宽度与命名。
+17. **`frmNotchPopup`** ([frmNotchPopup.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmNotchPopup.cs))
+    - **窗口职责**：可调跟踪陷波器 (Tracking Notch Filter / TNF) 弹出浮窗。
+    - **核心功能**：在全景频谱上快速设置特定频点的窄带陷波滤除（TNF），设定其中心频率、Q 值衰减带宽与抑制深度，用于彻底消除固定单音频载波干扰。
+18. **`frmBandwidth`** ([frmBandwidth.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmBandwidth.cs))
+    - **窗口职责**：全景接收带宽快速调整弹窗。
+    - **核心功能**：快速切换接收机采样率 (48kHz, 96kHz, 192kHz, 384kHz)，扩展或压缩 Panadapter 观察视窗的频宽。
+19. **`frmCFCConfig`** ([frmCFCConfig.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmCFCConfig.cs))
+    - **窗口职责**：连续频域校准 (Continuous Frequency Calibration / CFC) 与动态压缩配置窗。
+    - **核心功能**：针对发射音频链路中的多频段向下扩展器 (Downward Expander) 与压限器进行动态特征曲线拟合与校准。
+20. **`Path_Illustrator`** ([Path_Illustrator.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Path_Illustrator.cs))
+    - **窗口职责**：射频前端信号通道链路交互示意窗口。
+    - **核心功能**：动态以拓扑图形式直观展示天线接口 (ANT1/2/3)、旁路继电器、Alex 预选带通滤波器、步进衰减器、LNA 前置放大器、ADC 抽样及 DAC 功放输出的实际物理通断流向。
+21. **`XVTRForm`** ([xvtr.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/xvtr.cs))
+    - **窗口职责**：微波/超短波变频器 (Transverter) 配置窗口。
+    - **核心功能**：为 50MHz、144MHz、430MHz、1.2GHz 等外接微波变频模块配置本振频率 (LO Frequency)、中频接口 (IF)、频段增益补偿及发射功率安全上限。
+
+---
+
+### 6.4 空间分集、辅助接收与全景分析 (Diversity, Multi-RX & RF Analysis)
+
+22. **`rxa`** ([rxa.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/rxa.cs))
+    - **窗口职责**：独立 RX2 辅助接收机浮动控制面板。
+    - **核心功能**：在支持双物理 ADC 或多通道 DDC 的硬件上，提供完整的第二接收机交互面板（独立调谐、模式选择、音量与滤波器），支持跨频段异频监听与主从锁定。
+23. **`DiversityForm`** ([DiversityForm.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/DiversityForm.cs))
+    - **窗口职责**：双天线相干空间分集控制器 (Diversity Reception Console)。
+    - **核心功能**：连接双物理天线接收通道，通过极坐标系拖拽调节天线信号的相对相位角与幅度加权比，在空间上形成可控的接收天线阵列方向图，用于消除强同频干扰信号 (Phase Nulling) 或大幅抑制电离层深衰落。
+24. **`wideband`** ([wideband.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/wideband.cs))
+    - **窗口职责**：宽带全景射频频谱显示窗 (Wideband Panadapter)。
+    - **核心功能**：展示直接从硬件高速 ADC 抽取的宽带射频全貌（覆盖 0~61.44MHz），无需调谐即可一览短波全波段活跃状况。
+25. **`RAForm`** ([RAForm.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/RAForm.cs))
+    - **窗口职责**：射频网络分析仪/天线驻波扫描窗 (Radio Analyzer)。
+    - **核心功能**：控制发射机在指定频段范围内执行小功率步进式扫频，根据反馈的反射功率计算并绘制天线系统的全频段驻波比 (SWR) 阻抗曲线。
+26. **`frmMeterDisplay`** ([frmMeterDisplay.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmMeterDisplay.cs))
+    - **窗口职责**：独立浮动大尺寸高精度 S 表/功率表视窗。
+    - **核心功能**：可拆卸、自由缩放的独立仪表盘，支持模拟复古指针与高分辨率柱状图，清晰显示信号强度 (S9+dB)、发射正向功率、反射功率及麦克风音频电平。
+
+---
+
+### 6.5 频段堆栈、记忆信道与调谐辅助 (BandStack, Memory & Tuning)
+
+27. **`MemoryForm`** ([MemoryForm.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Memory/MemoryForm.cs))
+    - **窗口职责**：频率记忆信道管理器 (Frequency Memory Bank)。
+    - **核心功能**：管理包含频率、模式、信道名、中继音调 (CTCSS/DCS)、功率限制的预存信道库，支持分组分类、排序、搜索与 CSV/JSON 格式导入导出。
+28. **`frmBandStack2`** ([frmBandStack2.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmBandStack2.cs))
+    - **窗口职责**：现代化频段预设栈浮窗 (BandStack Manager)。
+    - **核心功能**：列出各业余波段（160m~6m）内最近访问的多个频率与模式历史记忆，点击即可快速跳频回溯。
+29. **`frmQuickRecallPopupList`** ([frmQuickRecallPopupList.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmQuickRecallPopupList.cs))
+    - **窗口职责**：快速调谐记忆悬浮弹窗 (Quick Recall Menu)。
+    - **核心功能**：为临时保存的快速通联点提供一键召回列表。
+30. **`frmInfoBarPopup`** ([frmInfoBarPopup.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmInfoBarPopup.cs))
+    - **窗口职责**：顶部信息栏悬浮指标窗。
+    - **核心功能**：展示当前电台连接状态、电离层空间天气指标 (SFI 太阳辐射通量、A/K 地磁指数)、当前调谐频点的业余频段分配规则以及 DX Cluster 呼叫点信息。
+
+---
+
+### 6.6 CW 莫尔斯电码与键盘发报窗口 (CW & Morse Code Operations)
+
+31. **`CWX`** ([cwx.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/cwx.cs))
+    - **窗口职责**：CW 键盘自动拍发控制中心 (CW Transmit Controller)。
+    - **核心功能**：
+      - 提供 12 个可编程 CW 宏功能按键 (F1~F12)，支持呼号、信区、QSO 模板与竞赛序列号自动递增拍发；
+      - 支持打字机模式实时键盘莫尔斯电码拍发与发送缓冲队列；
+      - 拍发速率调节 (WPM)、占空比调节与本地侧音音频监听控制。
+32. **`cwedit`** ([cwedit.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/cwedit.cs))
+    - **窗口职责**：CW 宏文本内容与快捷键编辑器。
+    - **核心功能**：编辑配置 CWX 中各宏按键的通联电文模板，支持宏变量插入（如 `$mycall`, `$rst`, `$serial`）。
+
+---
+
+### 6.7 CAT 协议仿真与宏指令配置 (CAT & Rig Control Automation)
+
+33. **`CATTester`** ([CATTester.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/CAT/CATTester.cs))
+    - **窗口职责**：Kenwood CAT 协议指令交互调试台 (CAT Protocol Tester)。
+    - **核心功能**：提供串口与 TCP 网络 CAT 通信的调试终端，允许开发人员或高级用户手动发送原始 ASCII 指令（如 `FA;`, `FB;`, `MD;`, `TX;`），并实时截获电台返回的响应数据流。
+34. **`frmMacroButtonConfig`** ([frmMacroButtonConfig.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmMacroButtonConfig.cs))
+    - **窗口职责**：主界面宏按键功能绑定配置窗口。
+    - **核心功能**：将主操作面板上的一排可编程自定义宏按键映射到底层特定的 CAT 指令或内部电台动作。
+35. **`frmVariablePicker`** ([frmVariablePicker.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmVariablePicker.cs))
+    - **窗口职责**：系统内部变量与状态寄存器拾取窗。
+    - **核心功能**：为界面自定义状态指示灯 (LED) 或文本标签选取所监视的内部变量。
+
+---
+
+### 6.8 数据库管理、诊断与日志系统 (Database, Diagnostics & Logs)
+
+36. **`frmDBMan`** ([frmDBMan.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmDBMan.cs))
+    - **窗口职责**：数据库与配置文件管理器 (Database Manager)。
+    - **核心功能**：管理 Thetis 的核心 XML 配置文件与 SQLite 数据资产，支持创建多套不同场景下的电台预设档案 (Profiles)、一键备份、配置还原以及在数据库损坏时的安全恢复机制。
+37. **`frmFinder`** ([frmFinder.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmFinder.cs))
+    - **窗口职责**：全局电台控件与配置项快速搜索定位器 (Setting Finder)。
+    - **核心功能**：针对 Thetis 数百个复杂的设置选项，提供全文拼音/英文关键词模糊搜索，双击搜索结果可直接高亮跳转到对应 Setup 标签页中的目标控件。
+38. **`frmLog`** ([frmLog.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmLog.cs))
+    - **窗口职责**：运行时系统日志查看器窗口。
+    - **核心功能**：实时抓取并呈现 Thetis 的系统日志、网络连接异常、DSP 驱动告警信息。
+39. **`frmSeqLog`** ([frmSeqLog.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmSeqLog.cs))
+    - **窗口职责**：UDP 网络数据包序列号与丢包诊断视窗。
+    - **核心功能**：专门诊断以太网到 SDR 硬件链路健康度，实时捕获并统计数据包错序 (Out of Order) 与丢帧数量，评估网络抖动对音频破音的影响。
+40. **`LogForm`** ([clsProgressLog.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/clsProgressLog.cs))
+    - **窗口职责**：长时间异步操作日志滚动窗。
+    - **核心功能**：在固件更新或大规模批量校准时，显示底层执行的详细命令输出与耗时记录。
+41. **`frmReleaseNotes`** ([frmReleaseNotes.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmReleaseNotes.cs))
+    - **窗口职责**：软件版本更新日志呈现窗口。
+    - **核心功能**：内置 HTML/富文本渲染器，展示当前已安装版本或云端新版本的变更内容与功能特性。
+42. **`ColorPanel`** ([ColorButton.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/ColorButton.cs))
+    - **窗口职责**：自定义皮肤颜色拾取面板。
+    - **核心功能**：提供 HSV / RGB 色盘，为界面背景、字体、网格线与瀑布图渐变色板选取专属色彩。
+43. **`SpectrumTestForm`** ([clsSpectrumProcessor.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/clsSpectrumProcessor.cs))
+    - **窗口职责**：内部频谱分析算法研发与测试诊断窗口。
+    - **核心功能**：开发调试专用窗，挂接内部任意 DSP 节点读取原生频谱数据流并绘制波形。
+
+---
+
+### 6.9 Andromeda 专属硬件控制台窗口群 (`Andromeda/`)
+
+44. **`AndromedaEditForm`** ([AndromedaEditForm.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Andromeda/AndromedaEditForm.cs))
+    - **窗口职责**：Andromeda 实体物理控制台主映射编辑器。
+    - **核心功能**：为 Andromeda 专用硬件面板上的各物理旋钮、推子与矩阵微动开关分配具体的电台调谐动作。
+45. **`BandButtonsPopup`** ([BandButtonsPopup.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Andromeda/BandButtonsPopup.cs))
+    - **窗口职责**：物理面板波段按键映射浮窗。
+46. **`FilterButtonsPopup`** ([FilterButtonsPopup.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Andromeda/FilterButtonsPopup.cs))
+    - **窗口职责**：物理面板滤波器按键映射浮窗。
+47. **`ModeButtonsPopup`** ([ModeButtonsPopup.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Andromeda/ModeButtonsPopup.cs))
+    - **窗口职责**：物理面板工作模式按键映射浮窗。
+48. **`DisplaySettingsForm`** ([displaysettingsform.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Andromeda/displaysettingsform.cs))
+    - **窗口职责**：Andromeda 面板自带双行/多行 OLED 显示屏配置窗（调节亮度、排版与对比度）。
+49. **`ModeDependentSettingsForm`** ([ModeDependentSettingsForm.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Andromeda/ModeDependentSettingsForm.cs))
+    - **窗口职责**：模式关联专属硬件行为配置窗。
+50. **`SliderSettingsForm`** ([SliderSettingsForm.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Andromeda/SliderSettingsForm.cs))
+    - **窗口职责**：物理电位器/滑块的线性度曲线与中位死区校准窗。
+51. **`VFOSettingsPopup`** ([vfosettingspopup.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Andromeda/vfosettingspopup.cs))
+    - **窗口职责**：重型光学编码器调谐飞轮的加减速动态响应与调谐步进设置窗。
+
+---
+
+### 6.10 Midi2Cat 外设管理窗口群 (`Midi2Cat/`)
+
+52. **`Midi2CatSetupForm`** ([Midi2CatSetupForm.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Midi2Cat/Midi2CatSetupForm.cs))
+    - **窗口职责**：MIDI 调音台控制设备主设置中心。
+    - **核心功能**：实时监听接入计算机的 USB DJ 调音台 (如 Behringer CMD, Hercules DJ, Contour Shuttle)，捕获并绑定旋钮与推子的 MIDI 消息至 Thetis 电台动作。
+53. **`LoadDialog`** ([LoadDialog.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Midi2Cat/Midi2Cat.IO/LoadDialog.cs))
+    - **窗口职责**：MIDI 映射规则预设载入对话框。
+54. **`SaveAsDialog`** ([SaveAsDialog.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Midi2Cat/Midi2Cat.IO/SaveAsDialog.cs))
+    - **窗口职责**：MIDI 映射规则方案另存为对话框。
+55. **`PickDialog`** ([PickDialog.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Midi2Cat/Midi2Cat.IO/PickDialog.cs))
+    - **窗口职责**：MIDI 消息所触发的目标电台控制命令选择器。
+56. **`OrganiseDialog`** ([OrganiseDialog.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Midi2Cat/Midi2Cat.IO/OrganiseDialog.cs))
+    - **窗口职责**：已映射 MIDI 规则列表的分组整理、删除与排序管理窗口。
+
+---
+
+### 6.11 全量 WinForms 窗口速查表 (Summary Table)
+
+| 序号 | 窗口类名 (Class) | 对应源码文件 (File) | 功能分类 (Category) | 核心功能摘要 |
+| :--- | :--- | :--- | :--- | :--- |
+| 1 | `Console` | [console.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/console.cs) | 主控制台 | 电台核心总界面，集成双 VFO、全景频谱、调制模式与收发状态机 |
+| 2 | `Splash` | [splash.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/splash.cs) | 生命周期 | 启动闪屏与依赖库/Wisdom 初始化加载进度条 |
+| 3 | `ShutdownForm` | [ShutdownForm.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/ShutdownForm.cs) | 生命周期 | 安全退出与资源释放等待进度窗 |
+| 4 | `frmAbout` | [frmAbout.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmAbout.cs) | 帮助信息 | 显示版本号、许可证、作者声明与致谢名单 |
+| 5 | `Progress` | [progress.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/progress.cs) | 通用弹窗 | 通用耗时任务模态进度条对话框 |
+| 6 | `InputBox` | [InputBox.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/InputBox.cs) | 通用弹窗 | 通用单行文本录入对话框 |
+| 7 | `Setup` | [setup.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/setup.cs) | 系统配置 | 电台综合设置主面板 (硬件/音频/DSP/CAT/TCI/显示) |
+| 8 | `SelectFormsForReposition` | [setup.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/setup.cs) | 系统配置 | 屏幕分辨率变化时子窗口位置重置与排列辅助窗 |
+| 9 | `frmAddCustomRadio` | [frmAddCustomRadio.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmAddCustomRadio.cs) | 硬件配置 | 手动指定 IP/MAC 添加非局域网广播 SDR 硬件 |
+| 10 | `frmIPv4Picker` | [frmIPv4Picker.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmIPv4Picker.cs) | 硬件配置 | 本地以太网通信网卡 IPv4 绑定拾取器 |
+| 11 | `frmSerialPortPicker` | [frmSerialPortPicker.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmSerialPortPicker.cs) | 硬件配置 | 物理/虚拟 COM 串口选择对话框 |
+| 12 | `PSForm` | [PSForm.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/PSForm.cs) | 信号算法 | PureSignal 自适应数字预失真 (DPD) 控制台与双音频校准 |
+| 13 | `AmpView` | [AmpView.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/AmpView.cs) | 信号算法 | 功放 AM-AM / AM-PM 非线性特性曲线实时观测窗 |
+| 14 | `EQForm` | [eqform.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/eqform.cs) | 信号算法 | 接收 (RX) 与发射 (TX) 10 段图示/参数均衡器 |
+| 15 | `FilterForm` | [FilterForm.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/FilterForm.cs) | 滤波控制 | 滤波器通带高低截止频率与边沿陡度微调窗 |
+| 16 | `frmFilterManager` | [frmFilterManager.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmFilterManager.cs) | 滤波控制 | 多调制模式下快捷滤波器方案管理器 |
+| 17 | `frmNotchPopup` | [frmNotchPopup.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmNotchPopup.cs) | 滤波控制 | 手动可调单音跟踪陷波器 (TNF) 配置浮窗 |
+| 18 | `frmBandwidth` | [frmBandwidth.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmBandwidth.cs) | 滤波控制 | 全景频谱采样率与显示频宽快速调整窗 |
+| 19 | `frmCFCConfig` | [frmCFCConfig.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmCFCConfig.cs) | 信号算法 | 连续频域校准 (CFC) 音频压限与语音特征配置 |
+| 20 | `Path_Illustrator` | [Path_Illustrator.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Path_Illustrator.cs) | 硬件拓扑 | 射频前端天线选择、衰减器、滤波器物理通断流向拓扑图 |
+| 21 | `XVTRForm` | [xvtr.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/xvtr.cs) | 频段扩展 | 微波/超短波变频器 (Transverter) 本振与偏移量配置 |
+| 22 | `rxa` | [rxa.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/rxa.cs) | 辅助接收 | 独立 RX2 辅助接收机悬浮控制面板 |
+| 23 | `DiversityForm` | [DiversityForm.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/DiversityForm.cs) | 分集接收 | 双天线空间分集接收控制器 (相位相干抗衰落与消零) |
+| 24 | `wideband` | [wideband.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/wideband.cs) | 全景显示 | 高达 61.44MHz 的宽带射频 ADC 原始全景频谱仪 |
+| 25 | `RAForm` | [RAForm.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/RAForm.cs) | 射频测量 | 射频网络分析仪与天线驻波比 (SWR) 扫频测量窗 |
+| 26 | `frmMeterDisplay` | [frmMeterDisplay.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmMeterDisplay.cs) | 仪表显示 | 独立大尺寸复古指针式与高分辨率 S 表/功率表视窗 |
+| 27 | `MemoryForm` | [MemoryForm.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Memory/MemoryForm.cs) | 频率记忆 | 频率记忆信道管理器 (支持模式/音调/导入导出) |
+| 28 | `frmBandStack2` | [frmBandStack2.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmBandStack2.cs) | 调谐辅助 | 现代化波段堆栈历史频率快速回退与调谐浮窗 |
+| 29 | `frmQuickRecallPopupList` | [frmQuickRecallPopupList.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmQuickRecallPopupList.cs) | 调谐辅助 | 临时频率记忆点快速召回悬浮列表 |
+| 30 | `frmInfoBarPopup` | [frmInfoBarPopup.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmInfoBarPopup.cs) | 信息辅助 | 空间天气指标 (SFI/A/K) 与 DX Cluster 状态窗 |
+| 31 | `CWX` | [cwx.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/cwx.cs) | CW 操作 | CW 键盘实时拍发控制器与 12 个可编程比赛宏电文 |
+| 32 | `cwedit` | [cwedit.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/cwedit.cs) | CW 操作 | CW 宏快捷按键与自定义电文模板编辑器 |
+| 33 | `CATTester` | [CATTester.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/CAT/CATTester.cs) | 外部接口 | Kenwood TS-2000 CAT 控制指令交互调试控制台 |
+| 34 | `frmMacroButtonConfig` | [frmMacroButtonConfig.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmMacroButtonConfig.cs) | 外部接口 | 主控制台界面宏按钮 CAT 命令绑定配置窗 |
+| 35 | `frmVariablePicker` | [frmVariablePicker.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmVariablePicker.cs) | 外部接口 | 状态指示灯与动态标签的内部寄存器变量拾取器 |
+| 36 | `frmDBMan` | [frmDBMan.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmDBMan.cs) | 数据管理 | 内部配置数据库管理器 (备份、还原与坏库修复) |
+| 37 | `frmFinder` | [frmFinder.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmFinder.cs) | 辅助工具 | 全电台配置控件与菜单项全文模糊搜索定位器 |
+| 38 | `frmLog` | [frmLog.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmLog.cs) | 诊断日志 | 运行时系统通信与核心警告日志查看器 |
+| 39 | `frmSeqLog` | [frmSeqLog.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmSeqLog.cs) | 诊断日志 | 以太网 UDP 原始数据包序号丢包与抖动分析窗 |
+| 40 | `LogForm` | [clsProgressLog.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/clsProgressLog.cs) | 诊断日志 | 异步长任务执行进度与实时输出滚动日志窗 |
+| 41 | `frmReleaseNotes` | [frmReleaseNotes.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/frmReleaseNotes.cs) | 帮助信息 | 富文本 HTML 格式版本迭代与更新说明视窗 |
+| 42 | `ColorPanel` | [ColorButton.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/ColorButton.cs) | 界面外观 | 自定义界面皮肤与频谱线条颜色选取调色板 |
+| 43 | `SpectrumTestForm` | [clsSpectrumProcessor.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/clsSpectrumProcessor.cs) | 开发调试 | 频谱处理核心多源数据采集与基准测试窗口 |
+| 44 | `AndromedaEditForm` | [AndromedaEditForm.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Andromeda/AndromedaEditForm.cs) | 硬件面板 | Andromeda 专用物理面板旋钮与按键功能映射主窗 |
+| 45 | `BandButtonsPopup` | [BandButtonsPopup.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Andromeda/BandButtonsPopup.cs) | 硬件面板 | Andromeda 波段按键硬件映射浮窗 |
+| 46 | `FilterButtonsPopup` | [FilterButtonsPopup.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Andromeda/FilterButtonsPopup.cs) | 硬件面板 | Andromeda 滤波器按键硬件映射浮窗 |
+| 47 | `ModeButtonsPopup` | [ModeButtonsPopup.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Andromeda/ModeButtonsPopup.cs) | 硬件面板 | Andromeda 调制模式按键硬件映射浮窗 |
+| 48 | `DisplaySettingsForm` | [displaysettingsform.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Andromeda/displaysettingsform.cs) | 硬件面板 | Andromeda 自带 OLED 屏幕排版、背光与对比度配置窗 |
+| 49 | `ModeDependentSettingsForm` | [ModeDependentSettingsForm.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Andromeda/ModeDependentSettingsForm.cs) | 硬件面板 | Andromeda 调制模式专属硬件联动行为配置窗 |
+| 50 | `SliderSettingsForm` | [SliderSettingsForm.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Andromeda/SliderSettingsForm.cs) | 硬件面板 | Andromeda 物理滑块/推子行程校准与死区调节窗 |
+| 51 | `VFOSettingsPopup` | [vfosettingspopup.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Andromeda/vfosettingspopup.cs) | 硬件面板 | Andromeda 主光学编码器飞轮加减速与步进设置窗 |
+| 52 | `Midi2CatSetupForm` | [Midi2CatSetupForm.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Midi2Cat/Midi2CatSetupForm.cs) | MIDI 外设 | USB MIDI 控制台 (DJ 调音台) 映射与参数总设置窗 |
+| 53 | `LoadDialog` | [LoadDialog.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Midi2Cat/Midi2Cat.IO/LoadDialog.cs) | MIDI 外设 | MIDI 映射配置方案载入对话框 |
+| 54 | `SaveAsDialog` | [SaveAsDialog.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Midi2Cat/Midi2Cat.IO/SaveAsDialog.cs) | MIDI 外设 | MIDI 映射配置方案另存为对话框 |
+| 55 | `PickDialog` | [PickDialog.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Midi2Cat/Midi2Cat.IO/PickDialog.cs) | MIDI 外设 | MIDI 动作所触发的电台控制命令拾取器 |
+| 56 | `OrganiseDialog` | [OrganiseDialog.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Midi2Cat/Midi2Cat.IO/OrganiseDialog.cs) | MIDI 外设 | 已映射 MIDI 控制条目分组整理与排序对话框 |

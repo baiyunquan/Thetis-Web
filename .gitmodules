@@ -1,3 +1,6 @@
 [submodule "submodules/thetis-on-the-web"]
 	path = submodules/thetis-on-the-web
 	url = https://github.com/baiyunquan/thetis-on-the-web.git
+[submodule "submodules/vscode"]
+	path = submodules/vscode
+	url = https://github.com/microsoft/vscode.git
