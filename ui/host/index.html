@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Thetis Code OSS - Hello World</title>
+  <link rel="icon" href="./vscode/favicon.ico">
+  <link rel="stylesheet" href="./vscode/out/vs/workbench/workbench.web.main.internal.css">
+  <style>html, body { margin: 0; height: 100%; overflow: hidden; background: #1f1f1f; }</style>
+  <script>globalThis._VSCODE_FILE_ROOT = new URL('./vscode/out/', location.href).href;</script>
+  <script src="./vscode/out/nls.messages.js"></script>
+</head>
+<body>
+  <script type="module">
+    import { create, URI } from './vscode/out/vs/workbench/workbench.web.main.internal.js';
+    const info = await fetch('./build-info.json').then(response => response.json());
+    const base = new URL('./', location.href);
+    const isolatedBase = `${location.protocol}//{{uuid}}.localhost:${location.port}${base.pathname}vscode`;
+    create(document.body, {
+      webviewEndpoint: `${isolatedBase}/out/vs/workbench/contrib/webview/browser/pre/`,
+      additionalBuiltinExtensions: [
+        URI.parse(new URL('extensions/hello-world/', base).href),
+        URI.parse(new URL('extensions/theme-defaults/', base).href),
+        URI.parse(new URL('extensions/theme-seti/', base).href)
+      ],
+      productConfiguration: {
+        nameShort: 'Thetis Code OSS',
+        nameLong: 'Thetis Code OSS',
+        applicationName: 'thetis-code-oss',
+        quality: 'oss',
+        commit: info.commit,
+        webEndpointUrlTemplate: isolatedBase
+      },
+      configurationDefaults: {
+        'workbench.startupEditor': 'none',
+        'workbench.colorTheme': 'Default Dark Modern',
+        'workbench.iconTheme': 'vs-seti',
+        'window.title': 'Thetis Code OSS - Hello World',
+        'telemetry.telemetryLevel': 'off',
+        'update.mode': 'none',
+        'extensions.autoCheckUpdates': false,
+        'extensions.autoUpdate': false,
+        'security.workspace.trust.enabled': false
+      }
+    });
+  </script>
+</body>
+</html>

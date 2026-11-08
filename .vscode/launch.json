@@ -2,6 +2,17 @@
     "version": "0.2.0",
     "configurations": [
         {
+            "name": "Launch Code OSS Web Demo (no radio)",
+            "type": "clr",
+            "request": "launch",
+            "preLaunchTask": "Build All (Release)",
+            "program": "${workspaceFolder}/Project Files/bin/x64/Release/Thetis.exe",
+            "args": ["-code-demo"],
+            "cwd": "${workspaceFolder}/Project Files/bin/x64/Release",
+            "stopAtEntry": false,
+            "console": "internalConsole"
+        },
+        {
             "name": "Launch Thetis (Release)",
             "type": "clr",
             "request": "launch",

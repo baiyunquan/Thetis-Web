@@ -53,6 +53,15 @@ endif()
 
 # Copy runtime dependencies directly alongside the generated DLLs
 set(THETIS_WEBUI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/submodules/thetis-on-the-web")
+set(THETIS_CODE_WEB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/build/code-web")
+
+# Explicit, optional browser workbench build; normal radio builds only stage cached output.
+add_custom_target(code_web
+    COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${CMAKE_CURRENT_SOURCE_DIR}/ui/build-code-web.ps1"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+    COMMENT "Building pinned Code OSS browser workbench and Hello World extension"
+    VERBATIM
+)
 
 add_custom_target(copy_runtime_dependencies ALL
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${THETIS_RUNTIME_FILES} "$<TARGET_FILE_DIR:ChannelMaster>"
@@ -88,6 +97,13 @@ if(STAGE_TO_PROJECT_BIN)
             COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BIN_DIR}/$<CONFIG>/web"
             COMMAND ${CMAKE_COMMAND} -E copy_directory "${THETIS_WEBUI_DIR}" "${PROJECT_BIN_DIR}/$<CONFIG>/web"
             COMMENT "Staging WebUI assets to ${PROJECT_BIN_DIR}/$<CONFIG>/web"
+        )
+    endif()
+    if(EXISTS "${THETIS_CODE_WEB_DIR}/index.html")
+        add_custom_command(TARGET stage_to_project_bin POST_BUILD
+            COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${CMAKE_CURRENT_SOURCE_DIR}/ui/stage-code-web.ps1" -Destination "${PROJECT_BIN_DIR}/$<CONFIG>/web/code"
+            COMMENT "Staging Code OSS browser demo to ${PROJECT_BIN_DIR}/$<CONFIG>/web/code"
+            VERBATIM
         )
     endif()
 endif()

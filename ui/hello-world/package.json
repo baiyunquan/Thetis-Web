@@ -1,0 +1,32 @@
+{
+  "name": "hello-world",
+  "displayName": "Thetis Hello World",
+  "description": "A browser extension host and scripted webview smoke test.",
+  "version": "0.1.0",
+  "publisher": "thetis",
+  "private": true,
+  "engines": {
+    "vscode": "^1.95.0"
+  },
+  "categories": ["Other"],
+  "browser": "./extension.js",
+  "activationEvents": [
+    "onStartupFinished",
+    "onCommand:thetis.helloWorld"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "thetis.helloWorld",
+        "title": "Thetis: Hello World"
+      }
+    ]
+  },
+  "capabilities": {
+    "untrustedWorkspaces": { "supported": true },
+    "virtualWorkspaces": true
+  },
+  "scripts": {
+    "test": "node --test --test-reporter=tap test/*.test.js"
+  }
+}

@@ -28,6 +28,7 @@
     </UpgradeBackupLocation>
     <IsWebBootstrapper>false</IsWebBootstrapper>
     <TargetFrameworkVersion>v4.8</TargetFrameworkVersion>
+    <GenerateResourceUsePreserializedResources>true</GenerateResourceUsePreserializedResources>
     <ManifestCertificateThumbprint>AEF2072BFD4E1723668C4A72938E707A73AAFB8B</ManifestCertificateThumbprint>
     <ManifestKeyFile>PowerSDR_TemporaryKey.pfx</ManifestKeyFile>
     <GenerateManifests>false</GenerateManifests>
@@ -822,6 +823,7 @@
     </Compile>
     <Compile Include="SpotManager2.cs" />
     <Compile Include="TCIServer.cs" />
+    <Compile Include="EmbeddedWebContent.cs" />
     <Compile Include="titlebar.cs" />
     <Compile Include="TuneStep.cs" />
     <Compile Include="ucOtherButtonsOptionsGrid.cs" />

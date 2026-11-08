@@ -1322,6 +1322,7 @@ namespace Thetis
                 s += "  -help   this help\n\n";
                 s += "  -autostart         attempt to power on radio at start up\n";
                 s += "  -web / -tci        enable TCI server and WebUI on startup (http://localhost:50001)\n";
+                s += "  -code-demo         Code OSS browser diagnostic only, without radio initialization\n";
                 s += "  -cmasioconfig      show the cmASIO setup tab in audio setup\n";
                 s += "  -noinstancewarn    do not warn if other instances are running\n";
                 s += "  -nospec            do not use additional spectrum analysers from WDSP for filter item display\n";
@@ -1416,6 +1417,12 @@ namespace Thetis
             if (Common.HasArg(args, "-help"))
             {
                 if (showHelpInfo()) return;  // if we can show, instantly exit
+            }
+
+            if (Common.HasArg(args, "-code-demo"))
+            {
+                TCPIPtciServer.RunCodeWebDemo();
+                return;
             }
 
             //[2.10.3.12]MW0LGE command line adaptor select

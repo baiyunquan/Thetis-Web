@@ -2,6 +2,14 @@
     "version": "2.0.0",
     "tasks": [
         {
+            "label": "Build Code OSS Web Demo",
+            "type": "shell",
+            "command": "powershell.exe",
+            "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/ui/build-code-web.ps1"],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
             "label": "Build All (Release)",
             "type": "shell",
             "command": "powershell.exe",

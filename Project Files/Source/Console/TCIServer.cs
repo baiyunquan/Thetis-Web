@@ -6622,6 +6622,61 @@ namespace Thetis
 
 	public class TCPIPtciServer
 	{
+        // Diagnostic boot path: one embedded listener, no Console form or radio engine.
+        public static void RunCodeWebDemo()
+        {
+            string root = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "web");
+            if (!File.Exists(Path.Combine(root, "code", "index.html")))
+                throw new FileNotFoundException("Build and stage the Code OSS browser demo first.");
+
+            TcpListener listener = new TcpListener(IPAddress.Loopback, 50001);
+            listener.Start();
+            try
+            {
+                while (true)
+                {
+                    TcpClient client = listener.AcceptTcpClient();
+                    ThreadPool.QueueUserWorkItem(_ =>
+                    {
+                        using (client)
+                        {
+                            try
+                            {
+                                client.ReceiveTimeout = 10000;
+                                client.SendTimeout = 10000;
+                                using (NetworkStream stream = client.GetStream())
+                                {
+                                    StringBuilder header = new StringBuilder();
+                                    while (header.Length < 16384)
+                                    {
+                                        int next = stream.ReadByte();
+                                        if (next < 0) return;
+                                        header.Append((char)next);
+                                        if (header.Length >= 4 && header.ToString(header.Length - 4, 4) == "\r\n\r\n") break;
+                                    }
+                                    string request = header.ToString();
+                                    // Keep this diagnostic endpoint restricted to loopback browser origins.
+                                    Match host = Regex.Match(request, @"\r\nHost:\s*([^\r\n]+)", RegexOptions.IgnoreCase);
+                                    string authority = host.Success ? host.Groups[1].Value.Trim() : "";
+                                    if (!Regex.IsMatch(authority, @"^(localhost|127\.0\.0\.1|[a-z0-9-]+\.localhost):50001$", RegexOptions.IgnoreCase)) return;
+                                    if (request.StartsWith("GET / HTTP/"))
+                                    {
+                                        byte[] redirect = Encoding.ASCII.GetBytes("HTTP/1.1 302 Found\r\nLocation: /code/\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
+                                        stream.Write(redirect, 0, redirect.Length);
+                                        return;
+                                    }
+                                    EmbeddedWebContent.SendResponse(stream, request, root);
+                                }
+                            }
+                            catch (IOException ex) { Debug.Print("Code demo connection: " + ex.Message); }
+                            catch (SocketException ex) { Debug.Print("Code demo socket: " + ex.Message); }
+                        }
+                    });
+                }
+            }
+            finally { listener.Stop(); }
+        }
+
 		//
 		public delegate void ClientConnected();
 		public delegate void ClientDisconnected();
