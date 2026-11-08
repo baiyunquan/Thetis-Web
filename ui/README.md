@@ -35,6 +35,8 @@ pwsh -NoProfile -File ./ui/test-static-content.ps1
 
 The [extension tests](<D:/workspace/Thetis/ui/hello-world/test/extension.test.js>) cover command reuse, disposal, panel reopening, CSP, and the button message exchange. The [static responder tests](<D:/workspace/Thetis/ui/test-static-content.ps1>) cover ten HTTP scenarios, including traversal rejection, directory indexes, HEAD, WebAssembly MIME types, and worker isolation headers. The [Edge test](<D:/workspace/Thetis/ui/test-code-web.mjs>) checks workbench startup, two actual webview/worker message exchanges, command reuse, reload, uncaught page errors, and failed local resources. It saves screenshots and browser logs in the ignored build test directory.
 
+On 2026-11-09, Code OSS 1.146.0 at `fdefc478b9148c1a47f913b3ec618a1226d9f600`, the full Thetis Release pipeline, six extension tests, and ten static-response scenarios passed. The final Edge flow passed four consecutive fresh-browser runs, including reload, with zero page/network failures. Earlier runs intermittently missed the first button reply. The test now waits for Code's visible `active-frame`, and panel/host message traces are retained; the cause of the earlier intermittent failure is not established. Continue startup/input qualification when extending this diagnostic.
+
 ## Scope and limitations
 
 This proves the extension-based browser workbench approach. It does not implement the radio UI, a headless radio backend, or remote/LAN deployment. Loopback HTTP and `*.localhost` provide the secure contexts required by browser workers, cryptography, and webview service workers. A later network deployment needs HTTPS and controlled isolated webview origins.
