@@ -109,8 +109,12 @@ export class FoundationWorkbench implements vscode.Disposable {
       if (selected) this.model.dispatch({ type: 'setDensity', density: selected });
     });
     this.diagnostics.connect();
-    // Ensure Thetis Console is open on startup so the workbench is never empty
-    this.openPanel('console');
+    // Seed once. Native editor restoration owns subsequent sessions, including an
+    // intentionally empty editor area after the operator closes Console.
+    if (!context.workspaceState.get<boolean>('thetis.foundation.firstUse.v1', false)) {
+      void context.workspaceState.update('thetis.foundation.firstUse.v1', true);
+      this.openPanel('console');
+    }
     this.trace('Foundation activated: synthetic controls only; radio unavailable');
   }
   openPanel(id: PanelId, options: { beside?: boolean } = {}) {

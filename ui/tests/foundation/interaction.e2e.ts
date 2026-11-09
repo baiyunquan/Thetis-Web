@@ -1,5 +1,4 @@
-import { test, expect } from '@playwright/test';
-import { foundationView, command } from './helpers';
+import { test, expect, foundationView, command } from './helpers';
 
 test('the first physical click, VFO edits, receiver targeting, themes and reload preserve synthetic state', async ({ page }, testInfo) => {
   await page.goto('/code/');
@@ -43,9 +42,10 @@ test('an intentionally closed Console stays closed after reload and can be reope
   await foundationView(page);
   const tab = page.getByRole('tab', { name: /Thetis Console/ }).first();
   await tab.click();
-  await page.keyboard.press('Control+w');
+  await tab.locator('.action-label.codicon-close-small').click();
   await expect(page.getByRole('tab', { name: /Thetis Console/ })).toHaveCount(0);
   await page.reload();
+  await expect(page.getByText('Thetis: Foundation / Demo', { exact: true })).toBeVisible();
   await expect(page.getByRole('tab', { name: /Thetis Console/ })).toHaveCount(0);
   await command(page, 'Thetis: Open Console');
   await foundationView(page);
