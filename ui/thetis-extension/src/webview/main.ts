@@ -106,7 +106,11 @@ function setValue(id: string, value: string) {
   const element = document.getElementById(id) as HTMLInputElement | HTMLSelectElement | null;
   controlValues.setValue(element, value);
 }
-function text(id: string, value: string) { const element = document.getElementById(id); if (element) element.textContent = value; }
+function text(id: string, value: string) {
+  const element = document.getElementById(id);
+  // Preserve text nodes during focus reconciliation, including an in-flight click.
+  if (element && element.textContent !== value) element.textContent = value;
+}
 function formatted(hz: number): string { return String(hz).replace(/\B(?=(\d{3})+(?!\d))/g, '.'); }
 function render() {
   if (!state) return;
@@ -138,7 +142,7 @@ function render() {
   text('rx2-filter', `${state.rx2.filterHz / 1000} kHz`);
   const pause = document.getElementById('plot-pause');
   if (pause) {
-    pause.textContent = state.plotPaused ? 'Resume demo' : 'Pause demo';
+    text('plot-pause', state.plotPaused ? 'Resume demo' : 'Pause demo');
     pause.setAttribute('aria-label', state.plotPaused ? 'Resume synthetic plots' : 'Pause synthetic plots');
     pause.setAttribute('aria-pressed', String(state.plotPaused));
   }
