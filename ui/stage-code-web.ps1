@@ -19,14 +19,9 @@ while ($cursor.Length -ge $repo.Length) {
 if (Get-Process Thetis -ErrorAction SilentlyContinue) { throw 'Stop Thetis before staging browser assets.' }
 $source = Join-Path $repo 'build/code-web'
 if (-not (Test-Path -LiteralPath (Join-Path $source 'asset-manifest.json'))) { throw 'Build the Thetis UI before staging.' }
-if (-not (Test-Path -LiteralPath $target)) {
-    [IO.Directory]::CreateDirectory($target) | Out-Null
-}
-
-# Stage Code OSS assets to $target/code
+# The validated web root is generated output owned by this target. Replacing it
+# clears old WebUI files as well as obsolete files from earlier Code packages.
+if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
 $codeTarget = Join-Path $target 'code'
-if (Test-Path -LiteralPath $codeTarget) {
-    Remove-Item -LiteralPath $codeTarget -Recurse -Force
-}
 [IO.Directory]::CreateDirectory($codeTarget) | Out-Null
 Copy-Item -Path (Join-Path $source '*') -Destination $codeTarget -Recurse -Force
