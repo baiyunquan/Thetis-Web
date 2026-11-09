@@ -72,6 +72,7 @@ class Program
                 HostHttpRequest.Read(coalesced);
                 Check(coalesced.ReadByte() == 'X', "HTTP parser consumed first frame");
             }
+            HandshakeDeadline(fixture, config);
             Transport(host, false);
             Lifecycle(fixture, config, false);
             string thumbprint = Environment.GetEnvironmentVariable("THETIS_HOST_TEST_CERT");
@@ -92,6 +93,31 @@ class Program
             System.Console.WriteLine("PASS: host routing, peer/host restrictions, allowlisted assets, config, HEAD and header/frame preservation.");
         }
         finally { Directory.Delete(fixture, true); }
+    }
+    static void HandshakeDeadline(string fixture, HostingConfiguration config)
+    {
+        using (var deadlineHost = new CodeHost(fixture, config))
+        {
+            var listener = new TcpListener(IPAddress.Loopback, 0);
+            listener.Start();
+            var worker = new Thread(() => deadlineHost.Dispatch(listener.AcceptTcpClient()));
+            worker.Start();
+            try
+            {
+                using (var client = new TcpClient())
+                {
+                    client.Connect(IPAddress.Loopback, ((IPEndPoint)listener.LocalEndpoint).Port);
+                    var stream = client.GetStream();
+                    // Every byte arrives well within the socket's per-read timeout.
+                    // A total header deadline must still release the worker.
+                    using (var drip = new Timer(_ => { try { stream.WriteByte((byte)'G'); } catch (IOException) { } catch (ObjectDisposedException) { } }, null, 0, 200))
+                        Check(worker.Join(12500), "Slow headers exceeded the ten-second total handshake budget");
+                }
+                Check(deadlineHost.ActiveConnections == 0, "Expired handshake retained an asset client");
+            }
+            finally { deadlineHost.Stop(); listener.Stop(); worker.Join(2000); }
+        }
+        System.Console.WriteLine("PASS: slow header bytes cannot extend the total connection handshake deadline.");
     }
     static string Response(CodeHost host, string path, string authority = "localhost:50001", string ip = "127.0.0.1", bool tls = false, string method = "GET")
     {

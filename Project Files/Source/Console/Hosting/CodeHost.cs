@@ -97,9 +97,13 @@ namespace Thetis.Hosting
         private void DispatchRegistered(TcpClient client, Action<TcpClient, byte[]> legacy)
         {
             bool handedOff = false;
+            Timer handshakeDeadline = null;
             try
             {
                 if (IsStopped) return;
+                // A peer cannot extend classification/TLS/header parsing indefinitely
+                // by sending a byte just before each socket read timeout.
+                handshakeDeadline = new Timer(_ => client.Close(), null, 10000, Timeout.Infinite);
                 client.NoDelay = true;
                 client.ReceiveTimeout = 10000;
                 client.SendTimeout = 10000;
@@ -117,6 +121,8 @@ namespace Thetis.Hosting
                 try
                 {
                     HostHttpRequest request = HostHttpRequest.Read(stream);
+                    handshakeDeadline.Dispose();
+                    handshakeDeadline = null;
                     if (!tls && legacy != null && request.HasToken("Upgrade", "websocket") && request.Header("Sec-WebSocket-Key").Length != 0 &&
                         request.Path != "/code" && !request.Path.StartsWith("/code/", StringComparison.Ordinal))
                     {
@@ -142,6 +148,7 @@ namespace Thetis.Hosting
             catch (Exception ex) { System.Diagnostics.Debug.Print("Code host request rejected: " + ex.Message); }
             finally
             {
+                handshakeDeadline?.Dispose();
                 if (!handedOff) client.Close();
                 lock (lifecycle) clients.Remove(client);
             }
