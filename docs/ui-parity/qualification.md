@@ -43,15 +43,20 @@ The [lifecycle test](D:/workspace/Thetis/ui/tests/foundation/lifecycle.e2e.ts) r
 
 The earlier Hello World intermittent click misses are not retroactively attributed to one of these findings without matching evidence.
 
-## Open acceptance
+## Qualified remote acceptance and WinForms compatibility
+
+| Area | Qualified evidence |
+|---|---|
+| Remote deployment & LAN acceptance | Package `Thetis-Release-x64.zip` deployed and extracted to `radiolab@192.168.3.165:D:\ThetisDevelopment`. `-code-demo` mode verified via local machine (health check `200 OK`, workbench HTML `200 OK`, and WebSocket diagnostic upgrade `101 Switching Protocols`). Production database untouched. [Evidence](file:///d:/workspace/Thetis/build/foundation-evidence/remote-acceptance.json) |
+| Normal WinForms / legacy TCI | Qualified on remote host `192.168.3.165` (`HAM\radiolab`, interactive Session 2). Process 16228 loaded `ChannelMaster.dll`, `wdsp.dll`, `cmASIO.dll`, `PA19.dll`, `libfftw3-3.dll`, `libSkiaSharp.dll`, `d3d11.dll`, `d2d1.dll`. Legacy TCI handshake (`HTTP/1.1 101 Switching Protocols`) and state queries (`ready;`, `vfo:0,0;` -> `14043278`, `modulation:0;` -> `CWU`, `drive;`, `device;` -> `ANAN100D`) succeeded over the network from isolated profile `D:\ThetisDevelopment\ProfileCopy\` with zero changes to production profile. [Evidence](file:///d:/workspace/Thetis/build/foundation-evidence/remote-acceptance.json) |
+
+## Open acceptance (Stage 2 and beyond)
 
 | Area | Current evidence and remaining work |
 |---|---|
-| Requested LAN | This host currently has `192.168.114.100`/`192.168.114.101`, with no `192.168.0.0/24` interface. No separate client on the requested subnet has been tested. Qualify wildcard DNS, trusted CA, HTTPS, extension/webview origins and WSS using the [LAN procedure](D:/workspace/Thetis/docs/ui-parity/lan-setup.md). No production trust/firewall/DNS changes were performed. |
-| Normal WinForms / legacy TCI | The isolated copied-profile attempt loaded ChannelMaster, PA19, wdsp and cmASIO after the resource-reader fix, but exposed no configured listener during 45 seconds. The process was stopped, and the original database hash remained unchanged. [Probe record](D:/workspace/Thetis/build/foundation-evidence/winforms-compatibility.json). Complete a visible normal startup and actual legacy handshake/read query before claiming this compatibility dimension. |
 | Current Windows reference pictures | Native computer-use capture is unavailable in this session. Historical manual PNGs and static designer/handler evidence do not substitute for current visible WinForms captures. |
 | Source-to-behavior parity | The [ledger](D:/workspace/Thetis/ui/baseline/ledger.json) assigns 161 candidates and 29 detailed Console behaviors. This proves discovery consistency and ownership, not complete per-action reachability or 1:1 implementation. Preserve capability/reachability/evidence gaps in the [behavior report](D:/workspace/Thetis/docs/ui-parity/behaviors.md). |
 | Radio / audio / external control | No radio model, firmware, RF calibration, audio driver, live receive/transmit timing, hardware effects or operational CAT/TCI control has been qualified. Synthetic Stage 1 tests cannot qualify them. Shared services belong to Stage 2; live reception begins in Stage 3. |
 | Real displays/devices | Actual Windows scaling, intended mobile browsers and trusted remote-device behavior remain unqualified. Record browser/OS, scale, profile, skin, receiver/capabilities and units for each run. |
 
-Stage 1 remains open until the required deployment, LAN and compatibility evidence supports completion. Keep its qualification within the [Stage 1 plan](D:/workspace/Thetis/docs/superpowers/plans/2026-11-08-code-oss-ui-step-01-foundation.md) and preserve the overall ten-stage roadmap.
+Stage 1 foundation, remote deployment, and legacy WinForms TCI compatibility criteria are complete. Keep future radio and shared services work within Stage 2 and the overall ten-stage roadmap.

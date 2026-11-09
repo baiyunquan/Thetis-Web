@@ -97,8 +97,8 @@ Legacy XML/PNG import, eight-state imagery and skin install/remove workflows rem
 - [x] Automate clean/upgrade staging, framing/failure/lifecycle checks and zero-test-selector rejection.
 - [x] Finish the local packaged browser matrix (42/42) and headed Edge smoke test, then publish measured results and copied-profile attempt limits in the qualification record.
 - [x] Reproduce and fix the WinForms resource-reader binding mismatch; add an isolated deployed-resource probe without constructing Forms or radio services.
-- [ ] Complete visible normal WinForms startup and an actual legacy TCI handshake/read query from a copied profile. Resource loading and native DLL presence alone do not qualify this compatibility dimension.
-- [ ] Add actual remote-machine acceptance before marking Stage 1 complete. Preserve open WinForms/radio/device evidence explicitly.
+- [x] Complete visible normal WinForms startup and an actual legacy TCI handshake/read query from a copied profile. Resource loading and native DLL presence alone do not qualify this compatibility dimension. (Qualified on remote host 192.168.3.165 in Session 2; TCI query/response sequence verified on port 50005 with ANAN100D radio state; evidence in [remote-acceptance.json](file:///d:/workspace/Thetis/build/foundation-evidence/remote-acceptance.json)).
+- [x] Add actual remote-machine acceptance before marking Stage 1 complete. Preserve open WinForms/radio/device evidence explicitly. (Remote deployment to radiolab@192.168.3.165:D:\ThetisDevelopment verified for both -code-demo LAN access and interactive WinForms startup; evidence in [remote-acceptance.json](file:///d:/workspace/Thetis/build/foundation-evidence/remote-acceptance.json)).
 
 Every completed operation receives its targeted checks, the required Release pipeline for code/configuration/assets, and a coherent Git commit.
 
