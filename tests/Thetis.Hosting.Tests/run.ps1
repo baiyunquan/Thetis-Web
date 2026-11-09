@@ -8,7 +8,13 @@ $certificate = New-SelfSignedCertificate -DnsName 'thetis-test.home.arpa','*.the
 $priorCertificate = $env:THETIS_HOST_TEST_CERT
 try {
     $env:THETIS_HOST_TEST_CERT = $certificate.Thumbprint
-    & (Join-Path $PSScriptRoot 'bin/Release/net48/Thetis.Hosting.Tests.exe')
+    $exeCandidates = @(
+        (Join-Path $PSScriptRoot 'bin/Release/net48/Thetis.Hosting.Tests.exe'),
+        (Join-Path $PSScriptRoot 'bin/x64/Release/net48/Thetis.Hosting.Tests.exe')
+    )
+    $exe = $exeCandidates | Where-Object { Test-Path $_ } | Select-Object -First 1
+    if (-not $exe) { throw 'Thetis.Hosting.Tests.exe not found in build outputs.' }
+    & $exe
     if ($LASTEXITCODE -ne 0) { throw 'Hosting harness failed.' }
 } finally {
     $env:THETIS_HOST_TEST_CERT = $priorCertificate
