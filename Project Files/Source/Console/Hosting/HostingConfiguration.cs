@@ -103,6 +103,7 @@ namespace Thetis.Hosting
         {
             string suffix = tls ? BaseHost : "localhost";
             if (string.Equals(host, suffix, StringComparison.OrdinalIgnoreCase)) return true;
+            if (!tls && (string.Equals(host, "127.0.0.1", StringComparison.OrdinalIgnoreCase) || string.Equals(host, "localhost", StringComparison.OrdinalIgnoreCase))) return true;
             return Regex.IsMatch(host ?? "", @"^(?:(?:v--)?[0-9a-v]{52}|[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12})\." + Regex.Escape(suffix) + "$", RegexOptions.IgnoreCase);
         }
     }

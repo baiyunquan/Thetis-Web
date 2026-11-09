@@ -149,8 +149,7 @@ Starts Thetis loopback Web and WebSocket host on port 50001 without initializing
 ```powershell
 & './Project Files/bin/x64/Release/Thetis.exe' -code-demo
 ```
-- **Thetis On The Web (TOTW)** (Complete Web SDR Radio): [http://localhost:50001/](http://localhost:50001/) or [http://localhost:50001/totw.html](http://localhost:50001/totw.html)
-- **Code OSS Modular Workbench** (Step 01 Developer Shell): [http://localhost:50001/code/](http://localhost:50001/code/)
+- **Web Interface**: [http://localhost:50001/](http://localhost:50001/) (automatically redirects to `/code/`)
 - **Health Check API**: [http://localhost:50001/code/health](http://localhost:50001/code/health)
 
 ### Mode B: Full Radio Operation with WebUI
@@ -158,8 +157,7 @@ Starts SDR hardware processing and enables WebUI server on port 50001:
 ```powershell
 & './Project Files/bin/x64/Release/Thetis.exe' -web
 ```
-- **Thetis On The Web (TOTW)**: [http://localhost:50001/](http://localhost:50001/)
-- **Code OSS Workbench**: [http://localhost:50001/code/](http://localhost:50001/code/)
+- **Web Interface**: [http://localhost:50001/](http://localhost:50001/) (redirects to `/code/`)
 - **Desktop WinForms UI**: Displayed on local screen.
 
 ### Mode C: Standard Desktop WinForms Mode
