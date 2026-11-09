@@ -40,6 +40,8 @@ if (-not (Test-Path -LiteralPath $pnpm)) {
 $env:PATH = $nodeDir + ';' + $env:PATH
 if ((& $node --version) -ne "v$nodeVersion") { throw 'Incorrect Node version.' }
 if ((& $node $pnpm --version) -ne $pnpmVersion) { throw 'Incorrect pnpm version.' }
+& $node (Join-Path $PSScriptRoot 'scripts/code-cache.mjs') --validate-source
+if ($LASTEXITCODE -ne 0) { throw 'Code OSS source does not match the clean qualified pin.' }
 
 if (-not $RebuildCode) {
     & $node (Join-Path $PSScriptRoot 'scripts/code-cache.mjs') --check
