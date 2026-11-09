@@ -300,7 +300,19 @@ window.addEventListener('message', event => {
 const restoredScroll = bridge.getState()?.scrollTop;
 if (typeof restoredScroll === 'number' && Number.isFinite(restoredScroll)) window.scrollTo(0, restoredScroll);
 window.addEventListener('scroll', () => bridge.setState({ id, scrollTop: window.scrollY }), { passive: true });
-new ResizeObserver(() => { if (state) { root.dataset.density = resolveDensity(state.density, root.clientWidth, matchMedia('(pointer: coarse)').matches); drawPlots(); } }).observe(root);
+let resizeFrame = 0;
+new ResizeObserver(() => {
+  if (resizeFrame) return;
+  // Density can change the observed element's height. Perform layout writes in
+  // the next frame, outside ResizeObserver's current delivery cycle.
+  resizeFrame = requestAnimationFrame(() => {
+    resizeFrame = 0;
+    if (!state) return;
+    const density = resolveDensity(state.density, root.clientWidth, matchMedia('(pointer: coarse)').matches);
+    if (root.dataset.density !== density) root.dataset.density = density;
+    drawPlots();
+  });
+}).observe(root);
 if (isConsole) setInterval(() => { if (ready && state && !state.plotPaused && document.visibilityState === 'visible') { frame = (frame + 1) % 3600; drawPlots(); } }, 500);
 trace('script-ready');
 // Listeners and disabled controls are installed before readiness is announced.
