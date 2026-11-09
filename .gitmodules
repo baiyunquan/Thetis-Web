@@ -3,4 +3,4 @@
 	url = https://github.com/baiyunquan/thetis-on-the-web.git
 [submodule "submodules/vscode"]
 	path = submodules/vscode
-	url = https://github.com/microsoft/vscode.git
+	url = https://github.com/baiyunquan/vscode.git
