@@ -29,7 +29,9 @@ for (const folder of ['code-oss-host', 'thetis-extension']) {
   for (const file of await list(path.join(ui, folder), '', true)) runtimeFiles.push([folder + '/' + file,
     createHash('sha256').update(await fs.readFile(path.join(ui, folder, file))).digest('hex')]);
 }
-const uiBuildId = createHash('sha256').update(JSON.stringify({ cache: cache.fingerprint, runtimeFiles })).digest('hex');
+const packagingInputs = await Promise.all(['package.json', 'pnpm-lock.yaml', 'build.mjs'].map(async file => [file,
+  createHash('sha256').update(await fs.readFile(path.join(ui, file))).digest('hex')]));
+const uiBuildId = createHash('sha256').update(JSON.stringify({ cache: cache.fingerprint, runtimeFiles, packagingInputs })).digest('hex');
 // Only these two generated output roots can be replaced.
 for (const target of [out, staged]) {
   if (![path.join(repo, 'ui/dist'), path.join(repo, 'build/code-web')].includes(target)) throw new Error('Invalid UI output root');

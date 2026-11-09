@@ -2,10 +2,19 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Build Code OSS Web Demo",
+            "label": "Build Code OSS Browser Bundles",
             "type": "shell",
             "command": "powershell.exe",
             "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/ui/build-code-web.ps1"],
+            "group": "build",
+            "problemMatcher": []
+        },
+        {
+            "label": "Build Thetis Foundation UI",
+            "type": "shell",
+            "command": "powershell.exe",
+            "args": ["-NoProfile", "-ExecutionPolicy", "Bypass", "-File", "${workspaceFolder}/ui/build-ui.ps1"],
+            "dependsOn": "Build Code OSS Browser Bundles",
             "group": "build",
             "problemMatcher": []
         },

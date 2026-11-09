@@ -77,11 +77,12 @@ Pre-configured development tasks and launch profiles are available in `.vscode/`
    - `Build All (Release)`: Full native and managed compilation.
    - `Build Native Core Only (CMake)`: Incremental C/C++ compilation.
    - `Build C# Thetis Only (dotnet)`: Incremental C# compilation.
-   - `Build Code OSS Web Demo`: Compiles Code OSS browser workbench and UI host.
+   - `Build Code OSS Browser Bundles`: Ensures the pinned upstream browser bundle is current.
+   - `Build Thetis Foundation UI`: Builds the maintained host/extension using that bundle.
    - `Clean Build Directory`: Deletes `build/` cache.
 3. **Debugging / Running**: Select from the Run & Debug panel (<kbd>F5</kbd>):
    - `Launch Thetis (Release)`: Runs full radio application with WebUI enabled (`-web`).
-   - `Launch Code OSS Web Demo (no radio)`: Runs diagnostic Web host without hardware (`-code-demo`).
+   - `Launch Thetis Foundation (no radio)`: Runs the synthetic workbench without hardware (`-code-demo`).
 
 ---
 
@@ -136,8 +137,11 @@ Run test suites before committing changes:
 # 1. Run Thetis.Hosting C# integration test suite
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/Thetis.Hosting.Tests/run.ps1
 
-# 2. Run UI frontend Vitest unit test suite (38 tests)
+# 2. Run UI frontend Vitest unit test suite
 & './build/tools/node-v24.22.1-win-x64/node.exe' ui/scripts/test.mjs unit
+
+# 3. Start staged Thetis -code-demo, then run packaged browser qualification
+& './build/tools/node-v24.22.1-win-x64/node.exe' ui/scripts/test.mjs e2e foundation
 ```
 
 ---
@@ -145,20 +149,22 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tests/Thetis.Hosting.Tests/r
 ## 8. Launching Thetis
 
 ### Mode A: Web Host Diagnostic (No Radio Required)
-Starts Thetis loopback Web and WebSocket host on port 50001 without initializing SDR hardware:
+Starts the embedded foundation host on port 50001 without initializing SDR hardware. Local HTTP/WS works immediately; LAN HTTPS/WSS requires the [DNS/certificate setup](D:/workspace/Thetis/docs/ui-parity/lan-setup.md):
 ```powershell
 & './Project Files/bin/x64/Release/Thetis.exe' -code-demo
 ```
 - **Web Interface**: [http://localhost:50001/](http://localhost:50001/) (automatically redirects to `/code/`)
 - **Health Check API**: [http://localhost:50001/code/health](http://localhost:50001/code/health)
 
-### Mode B: Full Radio Operation with WebUI
-Starts SDR hardware processing and enables WebUI server on port 50001:
+### Mode B: WinForms with embedded hosting
+Starts the existing radio application and enables embedded hosting on port 50001:
 ```powershell
 & './Project Files/bin/x64/Release/Thetis.exe' -web
 ```
 - **Web Interface**: [http://localhost:50001/](http://localhost:50001/) (redirects to `/code/`)
 - **Desktop WinForms UI**: Displayed on local screen.
+
+The Code extension remains synthetic in Stage 1, including when served by normal WinForms startup. Shared radio services and exclusive operational frontend selection belong to Stage 2. Code is the sole browser distribution staged by CMake; the old WebUI submodule remains source-only.
 
 ### Mode C: Standard Desktop WinForms Mode
 ```powershell

@@ -4,7 +4,9 @@
   "private": true,
   "type": "module",
   "packageManager": "pnpm@12.16.0",
-  "engines": { "node": "24.22.1" },
+  "engines": {
+    "node": "24.22.1"
+  },
   "scripts": {
     "build": "node build.mjs",
     "test": "node scripts/test.mjs unit",
@@ -12,7 +14,7 @@
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {
-    "@playwright/test": "1.61.1",
+    "@playwright/test": "1.60.0",
     "@types/node": "24.12.4",
     "esbuild": "0.27.2",
     "typescript": "6.0.2",

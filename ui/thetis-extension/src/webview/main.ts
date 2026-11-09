@@ -3,6 +3,7 @@ import { BANDS, FILTERS, MODES, syntheticSpectrum, operatingFamily, type Foundat
 import { applyRadioTheme, resolveDensity, resolveRadioTheme } from '../theme/radioTheme';
 import type { EchoStatus } from '../diagnostics';
 import { bindControlValues } from './controlValues';
+import { previewPanel } from '../workbench/panelRegistry';
 
 declare function acquireVsCodeApi(): {
   postMessage(message: unknown): void;
@@ -68,6 +69,8 @@ function viewMarkup() {
   return `${body}${bridgeStatus()}`;
 }
 function utilityMarkup() {
+  const preview = previewPanel(id);
+  if (preview) return `<header class="utility-header"><h1>Thetis ${preview.title}</h1><span class="demo-badge">Stage ${preview.stage} preview</span></header><p>This feature is planned for Stage ${preview.stage}.</p><p>Planned destination: ${preview.destination}.</p><p>Foundation / Demo · Radio unavailable. This preview cannot operate a radio.</p>${bridgeStatus()}`;
   const headings: Record<string, string> = { audio: 'Audio', rf: 'RF', display: 'Display', setup: 'Setup', diagnostics: 'Diagnostics', memories: 'Memories' };
   let body: string;
   switch (id) {
@@ -82,6 +85,8 @@ function utilityMarkup() {
   return `<header class="utility-header"><h1>Thetis ${headings[id] ?? 'Foundation'}</h1><span class="demo-badge">Foundation / Demo · Radio unavailable</span></header>${body}${bridgeStatus()}`;
 }
 root.innerHTML = isConsole ? consoleMarkup() : isView ? viewMarkup() : utilityMarkup();
+// IDs and native ARIA/disabled states are stable future skin mapping identities.
+for (const element of root.querySelectorAll<HTMLElement>('[id]')) element.dataset.component = element.id;
 const controlValues = bindControlValues(document, window, () => render());
 
 function trace(event: string, target?: EventTarget | null, pointerId?: number) {
@@ -285,6 +290,7 @@ window.addEventListener('message', event => {
   } else if (message.type === 'diagnostic') {
     const diagnostic = message.status as EchoStatus;
     if (typeof diagnostic?.detail === 'string') text('diagnostic-status', diagnostic.detail);
+    document.getElementById('diagnostic-status')?.setAttribute('data-state', diagnostic.phase);
   }
 });
 const restoredScroll = bridge.getState()?.scrollTop;

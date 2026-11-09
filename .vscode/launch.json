@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "Launch Code OSS Web Demo (no radio)",
+            "name": "Launch Thetis Foundation (no radio)",
             "type": "clr",
             "request": "launch",
             "preLaunchTask": "Build All (Release)",

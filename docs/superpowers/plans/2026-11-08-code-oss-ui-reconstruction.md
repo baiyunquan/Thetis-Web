@@ -1,6 +1,8 @@
 # Thetis Code OSS UI: overall view and ten-step baseline
 
-Status: proposed future implementation baseline. This document replaces the former twelve-milestone roadmap with **exactly ten separate implementation plans**. Qualification belongs to every step; there is no additional qualification-only step.
+Status, 2026-11-09: Stage 1 foundation implementation is present and undergoing packaged-runtime qualification. Trusted cross-machine LAN acceptance remains open. Stages 2-10 remain future implementation. There are **exactly ten separate implementation plans**; qualification belongs to every step.
+
+The [Stage 1 record][step01], [runtime instructions](D:/workspace/Thetis/ui/README.md) and [qualification evidence](D:/workspace/Thetis/docs/ui-parity/qualification.md) distinguish implemented behavior, measured local results and unqualified deployment/hardware cases. The normal browser package loads the maintained Thetis extension. The old WebUI is removed from CMake deployment; the root entry opens Code. WinForms and legacy TCI remain.
 
 ## Intended result
 
@@ -119,7 +121,7 @@ Services own state/settings/validation/timing/jobs. Views own presentation and d
 
 Delivery remains one embedded C# endpoint on port 50001. Step 01 proves hashed webview origins, worker/service-worker resources and offline loading. Qualify localhost separately from secure LAN TLS/WSS and legacy plain TCI coexistence. No production Node/Python/Kestrel server.
 
-## Exactly ten future implementation plans
+## Exactly ten implementation plans
 
 | Step | Plan | Qualified visible effect |
 |---|---|---|
@@ -136,7 +138,7 @@ Delivery remains one embedded C# endpoint on port 50001. Step 01 proves hashed w
 
 ## Qualification in every step
 
-Each plan includes proposed files/interfaces, checkable tasks, five review-focus cases and targeted browser/WinForms/hardware acceptance. Proposed modules/scripts are created in future implementation, not claimed to exist now. A behavior ledger records original handler, picture/source reference, target view/editor ID, capability, initial state/action/result, units/ranges, persistence, external mapping and evidence.
+Each plan includes files/interfaces, checkable tasks and targeted browser/WinForms/hardware acceptance. Stage 1's existing modules are identified in its execution record; modules proposed for Stages 2-10 are future work. The [behavior ledger](D:/workspace/Thetis/ui/baseline/ledger.json) records original handlers, picture/source references, target surfaces, capabilities, initial state/action/result, units/ranges, persistence, external mapping and evidence status.
 
 Run the packaged workbench in a visible browser on the actual embedded endpoint. Test inputs and native hide/collapse/move/reset/reload; inspect screenshots/browser errors and backend outcomes. Compare separate Windows and Code runs from copied configurations. Each step incorporates applicable offline/reconnect, malformed state, concurrent controllers, audio/display load and resource cleanup, plus regression checks on earlier slices. Removing the former final milestone does not remove these checks.
 

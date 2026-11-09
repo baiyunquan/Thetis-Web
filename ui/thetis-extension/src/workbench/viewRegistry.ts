@@ -6,8 +6,8 @@ export interface FoundationView {
 }
 const icon = (name: string) => `media/${name}.svg`;
 export const PRIMARY_CONTAINERS: Container[] = [
-  ['operation', 'Operation'], ['memories', 'Memories'], ['audio', 'Audio'], ['rf', 'RF'],
-  ['display', 'Display'], ['setup', 'Setup'], ['diagnostics', 'Diagnostics']
+  ['operation', 'Operate'], ['memories', 'Memories'], ['audio', 'Audio'], ['rf', 'RF'],
+  ['display', 'Display & Skins'], ['setup', 'Setup'], ['diagnostics', 'Diagnostics']
 ].map(([id, title]) => ({ id: `thetis-${id}`, title, icon: icon(id) }));
 export const SECONDARY_CONTAINERS: Container[] = [{ id: 'thetis-receiver-controls', title: 'Receiver Controls', icon: icon('receiver') }];
 export const PANEL_CONTAINERS: Container[] = [

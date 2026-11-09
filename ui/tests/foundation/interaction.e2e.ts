@@ -1,4 +1,4 @@
-import { test, expect, foundationView, command } from './helpers';
+import { test, expect, foundationView, command, recordNativeViewRecreation, waitNativeStorage } from './helpers';
 
 test('the first physical click, VFO edits, receiver targeting, themes and reload preserve synthetic state', async ({ page }, testInfo) => {
   await page.goto('/code/');
@@ -6,6 +6,12 @@ test('the first physical click, VFO edits, receiver targeting, themes and reload
   const initial = Number(await view.locator('#vfo-a').inputValue());
   await view.getByRole('button', { name: 'Step VFO A up 1 kHz', exact: true }).click();
   await expect(view.locator('#vfo-a')).toHaveValue(String(initial + 1000));
+  await command(page, 'Thetis: Show Interaction Trace');
+  const trace = page.locator('.panel .view-lines');
+  await expect(trace).toContainText('console action setVfo accepted');
+  await testInfo.attach('first-input-bridge-trace', { body: await trace.innerText(), contentType: 'text/plain' });
+  await page.getByRole('button', { name: /^Hide Panel/ }).click();
+  view = await foundationView(page);
   for (const id of ['power', 'mox', 'tune', 'ptt']) await expect(view.locator(`#radio-${id}`)).toBeDisabled();
   await view.locator('#vfo-a').fill('14321567');
   await view.locator('#vfo-a').press('Tab');
@@ -27,14 +33,27 @@ test('the first physical click, VFO edits, receiver targeting, themes and reload
   await expect(view.locator('#plot-pause')).toHaveAccessibleName('Resume synthetic plots');
   await page.screenshot({ path: testInfo.outputPath('synthetic-interaction.png'), fullPage: true });
   // A layout command must preserve the model, and a normal reload must restore the open panel.
+  recordNativeViewRecreation(page);
   await command(page, 'Thetis: Restore Default Layout');
   view = await foundationView(page);
   await expect(view.locator('#vfo-a')).toHaveValue('14321567');
+  await waitNativeStorage(page, ['"thetis.operation.device":{"collapsed":false', '"serializedGrid":', '14321567']);
   await page.reload();
   view = await foundationView(page);
   await expect(view.locator('#vfo-a')).toHaveValue('14321567');
   await expect(view.locator('body')).toHaveAttribute('data-skin', 'midnight');
   await expect(view.locator('#plot-pause')).toHaveAccessibleName('Resume synthetic plots');
+});
+
+test('navigation opens a labelled later-stage preview in a native editor', async ({ page }) => {
+  await page.goto('/code/');
+  await foundationView(page);
+  await page.getByRole('tab', { name: 'Audio', exact: true }).click();
+  await page.getByText('Audio devices', { exact: true }).click();
+  const preview = await foundationView(page, 'audioDevices');
+  await expect(preview.locator('body')).toContainText('Stage 5 preview');
+  await expect(preview.locator('body')).toContainText('Planned destination: Audio editor / device routing');
+  await expect(page.getByRole('tab', { name: /Thetis Audio Devices Preview/ })).toBeVisible();
 });
 
 test('an intentionally closed Console stays closed after reload and can be reopened by command', async ({ page }) => {

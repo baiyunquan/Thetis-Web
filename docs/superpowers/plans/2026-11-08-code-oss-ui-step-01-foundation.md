@@ -1,97 +1,122 @@
-# Step 01: Baseline, Workbench and Embedded Hosting Implementation Plan
+# Step 01: Thetis Code OSS Foundation
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Track work with checkboxes. This is a future plan, not implementation authorization or test evidence.
+Status, 2026-11-09: implementation is present; packaged local qualification is being completed. Trusted cross-machine acceptance on `192.168.0.0/24` remains unqualified. This is Stage 1 of the [ten-stage roadmap](D:/workspace/Thetis/docs/superpowers/plans/2026-11-08-code-oss-ui-reconstruction.md), with qualification included here.
 
-**Goal:** Establish traceable WinForms behavior and a real multi-section Code browser workbench delivered by Thetis, with stable layout and skin foundations.
+## Scope and architecture
 
-**Architecture:** Package the pinned standalone workbench with a parent-owned host and browser extension. Register independently addressable native views around a synthetic Console editor, use diagnostic C# messages until Step 02 supplies radio services, and serve all runtime assets through the existing port.
+Deliver a Code OSS workbench with independently movable native views, a synthetic Console, native layout persistence, two radio skins and embedded browser hosting. Retain WinForms and legacy TCI. Shared radio services and exclusive operational frontend selection belong to Stage 2; live reception and Console reconstruction belong to Stage 3. No Stage 1 panel can transmit or invoke WinForms handlers remotely.
 
-**Tech Stack:** Existing CMake/MSVC/Ninja and net48 C#; browser TypeScript/CSS, esbuild, Vitest and Playwright. Use the checked-out Code [packageManager][code-package] and [.nvmrc][node-version] pins, presently pnpm 12.16.0 and Node 24.22.1; lock new frontend dependencies before CI.
+Application source is maintained in the parent-owned [host](D:/workspace/Thetis/ui/code-oss-host/src/bootstrap.ts) and [extension](D:/workspace/Thetis/ui/thetis-extension/src/extension.ts). Code's tracked source remains unchanged at revision `fdefc478b9148c1a47f913b3ec618a1226d9f600` (1.146.0). Node 24.22.1 and pnpm 12.16.0 are pinned. CMake/MSVC/Ninja and net48 CLI remain the application toolchain; all browser requests use the embedded C# port 50001.
 
-**Spec:** [Overall layout and ten-step baseline][overview], [source inventory][inventory], [source architecture analysis][analysis].
+The [runtime guide](D:/workspace/Thetis/ui/README.md) gives build, launch, interaction and test commands. The [qualification record](D:/workspace/Thetis/docs/ui-parity/qualification.md) is authoritative for measured results and open evidence. A completed implementation checkbox below does not qualify an unavailable network, device or radio.
 
-## Global Constraints
+## Visible layout
 
-- Keep upstream Code source untouched for ordinary UI changes; all custom source belongs to the parent repository.
-- Embedded C# HTTP/WebSocket delivery remains port 50001; no production Node/Python/Kestrel server or Code remote authority.
-- Preserve net48/native ABI, established build/staging declarations, comments/licensing and WinForms behavior. Do not create IDE artifacts.
-- Use actual source/manual screenshots as reference, copied test configurations, and explicit capability/qualification records. Never energize a radio to prove a synthetic shell.
-- Every implementation operation passes the required Release pipeline and its targeted checks before a coherent commit. No product implementation is performed by writing this plan.
+| Region | Foundation content |
+|---|---|
+| Activity Bar | Operate, Memories, Audio, RF, Display & Skins, Setup, Diagnostics |
+| Primary Side Bar | Power & Transmit; Audio & RF Gain; Device & Readiness |
+| Console editor | VFO A / Sync-Step-Recall / VFO B; host/demo identity; RX1 spectrum/waterfall; optional RX2 plot; Pan/Zoom/Display slot; DSP/gains/mode/filter controls; mode-dependent lower slot; RX2 strip |
+| Secondary Side Bar | Meters, Bands, Modes, Filters; initially hidden PureSignal and Diversity |
+| Bottom Panel | Optional CWX, Recordings, Schedules and diagnostic logs |
+| Status Bar | Foundation/demo identity; host/diagnostic connection; selected receiver and unavailable-radio status |
 
-## Review Focus
+Each independently movable section is a native contributed view. Navigation/lists are TreeViews, control sections are WebviewViews, and Console uses a WebviewPanel with normal tabs/splits. Future features open clearly labelled previews with their owning stage and planned destination. Power, MOX, Tune and PTT remain disabled.
 
-1. A workbench loads but its webview origin/service worker fails: require a scripted custom panel and local-resource round-trip.
-2. A user hides/moves/collapses views: preserve preferences without altering radio state or forcing layout on reload.
-3. Asset requests become radio clients or leak threads: classify HTTP/upgrades early and verify cleanup.
-4. A skin/CDN/font is missing offline: report/fallback predictably and require no third-party runtime resource.
-5. Historical pictures differ from current code: ledger distinguishes current, historical, conditional and dormant behavior.
+## 1.A: Source and picture baseline
 
-## Files and interfaces
+- [x] Maintain a [structured ledger](D:/workspace/Thetis/ui/baseline/ledger.json) for all 161 discovered candidates: 56 Forms, 16 UserControls and 89 Setup pages. Assign owners/stages/surfaces, source/handler references, reachability, capabilities and evidence status.
+- [x] Add 29 detailed Console behavior records, distinguishing current handlers from historical pictures, dormant code and diagnostic helpers.
+- [x] Validate independent inventory coverage, duplicate/missing identities, missing owners, missing source references, invented source lines and improper historical authority with the [checker](D:/workspace/Thetis/ui/baseline/validate.mjs).
+- [x] Preserve a rendered, inspected [real manual picture](D:/workspace/Thetis/docs/ui-parity/reference/manual-1.1-page-10.png), with explicit historical provenance in the [behavior report](D:/workspace/Thetis/docs/ui-parity/behaviors.md).
+- [ ] Add current WinForms screenshots/behavior traces from copied configurations where available. Leave missing radio, driver and picture evidence explicitly unqualified; static discovery is not full per-action parity.
 
-Proposed create: `ui/package.json`, `ui/pnpm-workspace.yaml`, `ui/pnpm-lock.yaml`, `ui/playwright.config.ts`, `ui/vitest.config.ts`; `ui/code-oss-host/index.html`, `src/bootstrap.ts`; `ui/thetis-extension/package.json`, `src/extension.ts`, `src/workbench/viewRegistry.ts`, `panelRegistry.ts`, `src/theme/tokens.ts`, `radioTheme.ts`; `ui/tests/foundation/hosting.e2e.ts`, `layout.e2e.ts`, `theme.test.ts`, `baseline.test.ts`; `docs/ui-parity/behaviors.md` and `docs/ui-parity/qualification.md`.
+## 1.B: Maintained frontend workspace
 
-Proposed managed create: `Project Files/Source/Console/Hosting/EmbeddedAssetRouter.cs` and `DiagnosticChannel.cs`. Modify [TCIServer][tci], [Thetis.csproj][project], [CMake][cmake], [presets][presets] and [build.ps1][build] only as needed for deterministic packaging/staging.
+- [x] Separate upstream `code_web` bundles from `thetis_ui` application compilation/packaging in [CMake](D:/workspace/Thetis/CMakeLists.txt).
+- [x] Maintain TypeScript/CSS/esbuild code with a frozen [workspace lock](D:/workspace/Thetis/ui/pnpm-lock.yaml), Vitest and Playwright. Keep Hello World source as a reference fixture; normal packaging loads Thetis.
+- [x] Provide `build`, `test`, `test:e2e` and `typecheck` scripts in the [manifest](D:/workspace/Thetis/ui/package.json). Forward path selectors, including `-- foundation`; reject zero collected tests.
+- [x] Cache Code by exact revision, tools, dependency locks and bundle options. Reject modified tracked Code sources and unexpected revisions before reuse/build/stamping.
+- [x] Emit an allowlisted distribution/build identity, including application source, UI lock and packaging inputs. Enabled staging depends on current output; missing/incompatible bundles fail clearly.
+- [x] Verify repeated Release builds reuse Code bundles while application changes rebuild the frontend.
 
-Proposed exports: `registerThetisViews(context): Disposable`, `openThetisPanel(id: string, options?: {beside?: boolean}): Promise<void>`, `applyRadioTheme(root: HTMLElement, tokens: RadioThemeTokens): void`. The registry owns native view/panel IDs from the overview. `DiagnosticEcho {requestId: string; value: string}` is an isolated non-radio message, not the Step 02 application protocol.
+## 1.C: Code-only browser deployment
 
-Define `ui/package.json` scripts `build`, `test` (Vitest run), `test:e2e` (Playwright test), forwarding selectors so later plans' `pnpm --dir ui run test -- <feature>` and `test:e2e -- <feature>` commands have one meaning. An E2E runner may use Node; the pages under qualification must come from C#, not a Node dev server.
+- [x] Remove `THETIS_WEBUI_DIR` and old WebUI copy/staging operations from CMake; retain native dependencies, WinForms and TCI targets.
+- [x] Stage the new distribution beneath the application's `web/code/` directory. Route `/` to `/code/`; remove the active `totw.html` fallback.
+- [x] Replace generated web roots after validating resolved owned paths and reparse-point ancestry. Fresh/upgrade tests reject unowned paths and remove stale root/Code assets using the [staging check](D:/workspace/Thetis/ui/test-code-staging.ps1).
 
-Configure Vitest for `**/*.test.ts` and the domain-local `thetis-extension/src/{rf,skins,display,gadgets}/**/*.spec.ts`; exclude browser E2E files. Configure Playwright for `tests/foundation/*.e2e.ts`, `thetis-extension/test/e2e/**/*.spec.ts` and `tests/e2e/**/*.e2e.ts`. Positional selectors below match file paths, not invented scenario aliases. Require nonzero collected tests. Initialize the minimal test workspace/runner with Task 1; Task 2 extends it with production build/packaging.
+The old WebUI submodule remains in the repository. The user's explicit follow-up selected Code-only deployment over the newer temporary dual-mode staging behavior.
 
-## Task 1: Build the interaction and picture baseline
+## 1.D: Embedded LAN hosting
 
-- [ ] Create the minimal test workspace/runner declared above and ledger rows for each [inventory][inventory] candidate: old control/handler, real screenshot/manual page, new view/editor ID, initial state/action/result, units/ranges, persistence, capability, external mapping and test. Validate duplicate/missing owners with a small checker in the UI test command; production packaging follows in Task 2.
-- [ ] Read [Console resource geometry][resources] and [manual][manual] screenshots with current handlers; classify historical Wave/spot UI, dormant rxa, unfinished frmFilterManager and diagnostic helpers. Capture Windows reference fixtures from copied profiles before real radio integration; mark evidence not yet obtainable as unqualified.
-- [ ] Test `baselineEveryActiveSurfaceHasAnOwner` and `historicalScreenshotDoesNotOverrideCurrentHandler`, including an intentionally unassigned row that must fail. Run `pnpm --dir ui run test -- foundation` after the runner exists; restore a complete ledger and require pass.
-- [ ] Record hardware/driver/browser variants and measured numerical/timing baseline fields, without inventing tolerances. Commit the baseline/checker as one completed operation after applicable checks.
+- [x] Classify accepted sockets before constructing radio-dependent TCI clients in [TCIServer](<D:/workspace/Thetis/Project Files/Source/Console/TCIServer.cs>). Preserve headers and coalesced first frames.
+- [x] Implement net48 SslStream TLS, exact packaged-file routing, streamed large assets, MIME/isolation headers, query preservation, host/origin checks and independent diagnostic framing in [Hosting](<D:/workspace/Thetis/Project Files/Source/Console/Hosting/CodeHost.cs>).
+- [x] Bound headers to 16 KiB and classification/TLS/header work to a ten-second total deadline. Stop closes queued, partial, TLS and diagnostic sockets; old generations cannot hand clients to a restarted server.
+- [x] Admit Code peers from loopback and `192.168.0.0/24`; apply no browser/device identity filter. Retain the separate legacy TCI access policy and plain upgrade path.
+- [x] Supply a [setup helper](D:/workspace/Thetis/ui/setup-code-host.ps1) for a local CA and non-exportable server key, certificate thumbprint configuration, public CA export, wildcard/base DNS instructions and an optional application-scoped TCP 50001 firewall rule.
+- [x] Exercise real plain TCP/TLS 1.2 and diagnostic framing using the [net48 harness](D:/workspace/Thetis/tests/Thetis.Hosting.Tests/Program.cs). Exercise actual isolated CA/leaf creation and reuse without installing trust/firewall rules.
+- [ ] Configure and qualify trusted cross-machine DNS, HTTPS, webview/extension origins and WSS on the requested subnet. This workstation's observed address is outside that subnet; local harnesses do not substitute for remote acceptance.
 
-## Task 2: Package the standalone workbench and browser extension
+Defaults: `https://thetis.home.arpa:50001/code/`, `https://<hash>.thetis.home.arpa:50001/...`, and `https://v--<hash>.thetis.home.arpa:50001/...`. See the [LAN procedure](D:/workspace/Thetis/docs/ui-parity/lan-setup.md).
 
-- [ ] Write failing `packagedHostUsesLocalBrowserExtension` and `hostDoesNotConfigureCodeRemoteAuthority` tests against a staged fixture manifest. Missing local extension or a TCI endpoint configured as remoteAuthority must fail.
-- [ ] Determine the pinned [web packaging prerequisites][web-build] on a clean checkout; the presence of a gulp target alone is not a complete recipe. Package the standalone web entry and matching assets, not upstream server-template HTML. Keep generated output in build caches and stage only distribution files.
-- [ ] Create the parent host/extension and use [additionalBuiltinExtensions][embedder] plus configuration defaults. Pin dependencies/lockfile, expose the UI scripts above, and connect package/staging checks to the established build declarations. Code itself rebuilds only when its pin/package changes.
-- [ ] Run targeted tests, `pnpm --dir ui run build`, and the full Release command below; verify staged runtime assets, then commit the packaging operation.
+## 1.E: Native views and layouts
 
-## Task 3: Implement native region/section registrations and skin tokens
+- [x] Register seven Primary containers, one Secondary container, two bottom containers and 21 independent views from the [registry](D:/workspace/Thetis/ui/thetis-extension/src/workbench/viewRegistry.ts).
+- [x] Preserve stable container/view identities. Seed Power/Gain and four right-side controls expanded, Device collapsed, RF extras hidden and bottom Panel closed, without forcing defaults on reload.
+- [x] Register Console serialization and first-use-only opening. A deliberately closed Console remains closed; the open command restores access.
+- [x] Implement default restoration through native actions, preserving synthetic state and native storage ownership. Document exact-width/collapse and single-view-header limits.
+- [ ] Complete the recorded browser matrix for move/hide/collapse/reload/restoration. Tests observe actual native IndexedDB persistence before raw reload rather than adding arbitrary startup delays or writing private storage keys.
 
-- [ ] Add failing `nativeSectionsHaveIndependentIds`, `containerIdsMatchPinnedSchema`, `collapsedDeviceViewStaysCollapsedOnReload`, `moveAndHideDoesNotRecreateEngine` and `singleRemainingViewUsesNativeHeaderBehavior` cases. Container IDs must match the pinned schema's alphanumeric/underscore/hyphen rule; dotted IDs remain valid view IDs but must not be used for containers.
-- [ ] Register the overview's Primary containers, Secondary receiverControls and bottom tasks/logs containers with [contribution points][views]. Use independent WebviewViews for control sections and native TreeViews for navigation/lists. Open the synthetic Console through createWebviewPanel, with real native tabs/splits.
-- [ ] Seed Expanded layout only on first open. Do not list collapsed sections in defaultLayout.views or force the seed on normal startup. Implement the explicitly presentation-only restore command through supported actions; respect native single-view header/hide exceptions.
-- [ ] Define semantic surface/text/selection/disabled/focus/fault and instrument color tokens in the proposed theme files, plus stable component/state IDs for later legacy skin mapping. Keep workbench theme separate. Test two contrasting skins, missing-asset fallback and theme changes without losing synthetic panel state; pass and commit this operation.
+Code periodically flushes browser state. Abrupt reload before that flush may lose recent native layout/editor changes; its ordered Reload Window command flushes before navigation. The native context menu also has an intentional 100 ms mouse-up guard, verified in current Code source; qualification uses ordinary keyboard menu actions.
 
-## Task 4: Prove embedded resource, worker and diagnostic routing
+## 1.F: Synthetic Console and shared state
 
-- [ ] Write failing `scriptedPanelLoadsThrough50001`, `webviewAssetAndWorkerLoadOffline`, `diagnosticEchoReturnsSameRequestId`, `assetLoadDoesNotCreatePersistentTciClient` and `unknownAssetCannotEscapeStagingRoot` checks. Exercise query preservation, MIME, host validation and malformed requests.
-- [ ] Add early HTTP/upgrade classification around [current dispatch][dispatch], canonical asset routing and required MIME/headers. Reserve a diagnostic path separately from legacy TCI upgrades. Preserve existing TCI clients, audio/IQ framing and cleanup.
-- [ ] Supply locally packaged hashed-hostname webview endpoints matching the pinned [origin check/service worker][webview]. Test candidate wildcard localhost resolution/secure context. If it fails, resolve within the supported architecture before implementing radio panels; never remove origin checks to force a demonstration.
-- [ ] Exercise cold load/reload, panel recreation and offline loading in visible Edge/Chrome. Record loopback separately from LAN; secure remote support must additionally prove trusted HTTPS/WSS/wildcard names and coexistence with legacy plain TCI on the same port. Run foundation E2E, full Release and cleanup checks, then commit.
+- [x] Share one explicitly synthetic extension model with integer-Hz frequencies, explicit RX1/RX2 targeting, VFO/mode/filter/band/gain actions and disposable subscriptions.
+- [x] Keep RX2 target selection separate from enabling its plot. Render deterministic spectrum/waterfall fixtures with pause/resume and mode-family lower regions.
+- [x] Restore latest snapshots to recreated views; retain local presentation state and separate host connectivity from radio readiness.
+- [x] Gate controls on a ready/snapshot handshake. Trace pointer delivery, panel actions and acknowledgements; fix queued cold diagnostic requests and idle diagnostic lifetime.
+- [ ] Complete and retain repeated physical mouse/keyboard/touch and first-input trace evidence. Earlier Hello World misses are not retroactively attributed to a cause without evidence.
 
-## Embedded qualification and handoff
+## 1.G: Skins and responsive presentation
 
-Pass requires real Primary/Secondary/bottom registrations, an activating browser extension, scripted webview/resource/service-worker loading and diagnostic echo on Thetis's actual endpoint. Inspect screenshots and console/network failures at the overview's size/scaling matrix. Test two or more views, a single remaining view, region closure, movement, saved state, explicit restore and offline startup. Record process/thread/client counts before/after repeated loads and preserve legacy TCI behavior.
+- [x] Supply Classic and Midnight radio skins with semantic surface/text/selection/focus/disabled/fault/stale/instrument tokens and stable component/ARIA/state identities.
+- [x] Keep panel tokens independent of the Code theme, persist skin selection and provide CSS instrument/control fallback without optional image dependencies.
+- [x] Supply Expanded, Compact, Touch and automatic density; reflow narrow VFO/deck content without automatically relocating native views.
+- [ ] Complete desktop geometry, browser scaling, portrait touch, keyboard focus and independent-theme evidence. Record browser emulation separately from physical Windows display scaling.
+
+Legacy XML/PNG import, eight-state imagery and skin install/remove workflows remain Stage 8.
+
+## 1.H: Repeatability and evidence
+
+- [x] Run browser tests against the actual staged Thetis process; support `THETIS_BASE_URL` for loopback or trusted LAN targets. Certificate errors remain failures.
+- [x] Retain screenshots, browser/network logs, build identities, first-input traces and connection/startup measurements beneath the generated evidence directory.
+- [x] Keep known source-specific upstream errors visible in raw logs; reject other page/resource failures and require all initial visible control views to become ready.
+- [x] Automate clean/upgrade staging, framing/failure/lifecycle checks and zero-test-selector rejection.
+- [ ] Finish the local packaged browser matrix and copied-profile compatibility checks, then publish measured results in the qualification record.
+- [ ] Add actual remote-machine acceptance before marking Stage 1 complete. Preserve open WinForms/radio/device evidence explicitly.
+
+Every completed operation receives its targeted checks, the required Release pipeline for code/configuration/assets, and a coherent Git commit.
+
+## Stage 2 handoff
+
+Presentation contracts are `registerThetisViews(context): Disposable`, `openThetisPanel(id: ThetisPanelId, options?): Promise<void>` and `applyRadioTheme(root, tokens)`. The foundation model supplies snapshot access, dispatch and disposable change subscriptions; its types are synthetic, and Stage 2 introduces authoritative radio contracts.
+
+| Endpoint | Purpose |
+|---|---|
+| `GET /code/` | Workbench |
+| `GET /code/host-config.json` | Endpoint templates and build identity |
+| `GET /code/health` | Foundation status and connection counts |
+| `WSS /code/diagnostics` | Non-radio `{requestId, value}` echo |
+| Existing plain legacy TCI route | Compatibility |
+
+The extension owns diagnostics. Individual webviews do not open their own sockets. There is no generic remote invocation of WinForms handlers or Stage 1 radio protocol.
 
 ```powershell
+pnpm --dir ui run build
 pnpm --dir ui run test -- foundation
 pnpm --dir ui run test:e2e -- foundation
 powershell -NoProfile -ExecutionPolicy Bypass -File ./build.ps1 -All -Config Release
 ```
 
-These commands are future acceptance commands, not results of this documentation task. Step 02 consumes the proven host, view IDs, theme contract, test scripts and ledger; it replaces diagnostic data with authoritative application services.
-
-[overview]: <D:/workspace/Thetis/docs/superpowers/plans/2026-11-08-code-oss-ui-reconstruction.md>
-[inventory]: <D:/workspace/Thetis/docs/superpowers/specs/2026-11-08-code-oss-ui-source-inventory.md>
-[analysis]: <D:/workspace/Thetis/docs/superpowers/specs/2026-11-08-code-oss-ui-reconstruction-design.md>
-[manual]: <D:/workspace/Thetis/Documentation/Radio/Thetis manual_1.1.pdf>
-[resources]: <D:/workspace/Thetis/Project Files/Source/Console/console.resx>
-[code-package]: <D:/workspace/Thetis/submodules/vscode/package.json:3>
-[node-version]: <D:/workspace/Thetis/submodules/vscode/.nvmrc:1>
-[web-build]: <D:/workspace/Thetis/submodules/vscode/build/gulpfile.vscode.web.ts:95>
-[embedder]: <D:/workspace/Thetis/submodules/vscode/src/vs/workbench/browser/web.api.ts:249>
-[views]: <D:/workspace/Thetis/submodules/vscode/src/vs/workbench/api/browser/viewsExtensionPoint.ts:60>
-[webview]: <D:/workspace/Thetis/submodules/vscode/src/vs/workbench/contrib/webview/browser/pre/index.html:350>
-[dispatch]: <D:/workspace/Thetis/Project Files/Source/Console/TCIServer.cs:2982>
-[tci]: <D:/workspace/Thetis/Project Files/Source/Console/TCIServer.cs:1882>
-[project]: <D:/workspace/Thetis/Project Files/Source/Console/Thetis.csproj>
-[cmake]: <D:/workspace/Thetis/CMakeLists.txt>
-[presets]: <D:/workspace/Thetis/CMakePresets.json>
-[build]: <D:/workspace/Thetis/build.ps1>
+Stage 1 is complete only when the packaged process delivers this foundation across the requested subnet and the evidence supports native layout, input, skins, hosting cleanup, deployment and compatibility claims.

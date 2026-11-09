@@ -2,20 +2,18 @@ import * as vscode from 'vscode';
 import { createFoundationModel, type FoundationModel, type FoundationState } from '../model/foundation';
 import { FoundationDiagnostics, type EchoStatus } from '../diagnostics';
 import { FOUNDATION_VIEWS, getRestoreViewIds } from './viewRegistry';
+import { PANEL_TITLES, type ThetisPanelId as PanelId } from './panelRegistry';
+import { foundationStatus } from './status';
+export type { ThetisPanelId } from './panelRegistry';
 
-type PanelId = 'console' | 'audio' | 'rf' | 'display' | 'setup' | 'diagnostics' | 'memories';
-const PANEL_TITLES: Record<PanelId, string> = {
-  console: 'Thetis Console', audio: 'Thetis Audio', rf: 'Thetis RF', display: 'Thetis Display',
-  setup: 'Thetis Setup', diagnostics: 'Thetis Diagnostics', memories: 'Thetis Memories'
-};
 let runtime: FoundationWorkbench | undefined;
-export function registerThetisViews(context: vscode.ExtensionContext) {
+export function registerThetisViews(context: vscode.ExtensionContext): vscode.Disposable {
   const instance = runtime = new FoundationWorkbench(context);
   instance.register();
   context.subscriptions.push({ dispose: () => { instance.dispose(); if (runtime === instance) runtime = undefined; } });
   return instance;
 }
-export async function openThetisPanel(id: string = 'console', options: { beside?: boolean } = {}): Promise<void> {
+export async function openThetisPanel(id: PanelId = 'console', options: { beside?: boolean } = {}): Promise<void> {
   if (!runtime) throw new Error('Thetis views have not been registered');
   runtime.openPanel(id in PANEL_TITLES ? id as PanelId : 'console', options);
 }
@@ -48,17 +46,21 @@ export class FoundationWorkbench implements vscode.Disposable {
   private readonly disposables: vscode.Disposable[] = [];
   private persistTimer?: ReturnType<typeof setTimeout>;
   private readonly status = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 150);
+  private readonly connectionStatus = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 149);
+  private readonly receiverStatus = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 148);
   constructor(private readonly context: vscode.ExtensionContext) {
     this.model = createFoundationModel(context.workspaceState.get('thetis.foundation.state.v1'));
     this.diagnostics = new FoundationDiagnostics(vscode.workspace.getConfiguration('thetis.foundation').get<string>('diagnosticEndpoint', ''), line => this.trace(line));
     this.disposables.push(this.model.subscribe(state => {
       this.broadcast({ type: 'state', state });
+      this.updateStatus();
       if (this.persistTimer) clearTimeout(this.persistTimer);
       this.persistTimer = setTimeout(() => { void context.workspaceState.update('thetis.foundation.state.v1', state); }, 180);
     }), this.diagnostics.subscribe(status => {
       this.broadcast({ type: 'diagnostic', status });
       this.refreshTrees();
       this.status.tooltip = `Foundation / Demo; radio unavailable. ${status.detail}`;
+      this.updateStatus();
     }));
   }
   register() {
@@ -67,7 +69,12 @@ export class FoundationWorkbench implements vscode.Disposable {
     this.status.tooltip = 'Synthetic console. Radio unavailable. Click to open Console.';
     this.status.command = 'thetis.openConsole';
     this.status.show();
-    this.disposables.push(this.status, this.output, this.diagnostics);
+    this.connectionStatus.command = { command: 'thetis.openPanel', title: 'Open host diagnostics', arguments: ['diagnostics'] };
+    this.receiverStatus.command = 'thetis.openConsole';
+    this.connectionStatus.show();
+    this.receiverStatus.show();
+    this.updateStatus();
+    this.disposables.push(this.status, this.connectionStatus, this.receiverStatus, this.output, this.diagnostics);
     for (const view of FOUNDATION_VIEWS) {
       if (view.type === 'webview') {
         this.disposables.push(vscode.window.registerWebviewViewProvider(view.id, {
@@ -179,20 +186,27 @@ export class FoundationWorkbench implements vscode.Disposable {
     this.refreshTrees();
   }
   private refreshTrees() { for (const provider of this.providers) provider.refresh(); }
+  private updateStatus() {
+    const status = foundationStatus(this.model.getState().receiverTarget, this.diagnostics.getStatus());
+    this.connectionStatus.text = status.connection;
+    this.connectionStatus.tooltip = status.detail;
+    this.receiverStatus.text = status.receiver;
+    this.receiverStatus.tooltip = 'Synthetic receiver selection. Power, MOX, Tune and PTT remain disabled.';
+  }
   private navigationRows(id: string): NavigationItem[] {
     const panel = (label: string, target: PanelId, description?: string): NavigationItem => ({ label, description, command: { command: 'thetis.openPanel', title: label, arguments: [target] } });
     const command = (label: string, command: string, description?: string): NavigationItem => ({ label, description, command: { command, title: label } });
     const unavailable = { label: 'Radio unavailable', description: 'Foundation / Demo' };
     switch (id) {
       case 'thetis.memories.navigation': return [panel('Memory workspace', 'memories', 'Synthetic presets'), panel('Open Console', 'console'), unavailable];
-      case 'thetis.audio.navigation': return [panel('Audio controls', 'audio', 'Synthetic AF / AGC'), { label: 'Audio devices', description: 'Unavailable in Foundation' }, unavailable];
-      case 'thetis.rf.navigation': return [panel('RF controls', 'rf'), { label: 'PureSignal', description: 'Radio unavailable' }, { label: 'Diversity', description: 'Radio unavailable' }];
-      case 'thetis.display.navigation': return [panel('Display preferences', 'display'), command('Select radio skin', 'thetis.selectRadioSkin'), command('Control density', 'thetis.selectDensity')];
+      case 'thetis.audio.navigation': return [panel('Audio controls', 'audio', 'Synthetic AF / AGC'), panel('Audio devices', 'audioDevices', 'Stage 5 preview'), unavailable];
+      case 'thetis.rf.navigation': return [panel('RF controls', 'rf'), panel('PureSignal', 'pureSignal', 'Stage 7 preview'), panel('Diversity', 'diversity', 'Stage 7 preview')];
+      case 'thetis.display.navigation': return [panel('Display preferences', 'display'), command('Select radio skin', 'thetis.selectRadioSkin'), command('Control density', 'thetis.selectDensity'), panel('Legacy skin management', 'legacySkins', 'Stage 8 preview')];
       case 'thetis.setup.navigation': return [panel('Foundation setup', 'setup'), command('Restore default layout', 'thetis.restoreDefaultLayout'), unavailable];
       case 'thetis.diagnostics.navigation': return [panel('Diagnostics', 'diagnostics'), command('Test diagnostic echo', 'thetis.diagnostics.echo', this.diagnostics.getStatus().phase), command('Show interaction trace', 'thetis.showTrace'), unavailable];
-      case 'thetis.tasks.cwx': return [{ label: 'CWX unavailable', description: 'Requires radio integration' }, unavailable];
-      case 'thetis.tasks.recordings': return [{ label: 'No recordings', description: 'Synthetic Foundation; recording unavailable' }];
-      case 'thetis.tasks.schedules': return [{ label: 'No schedules', description: 'Scheduling unavailable in Foundation' }];
+      case 'thetis.tasks.cwx': return [panel('CWX preview', 'cwx', 'Stage 6'), unavailable];
+      case 'thetis.tasks.recordings': return [panel('Recordings preview', 'recordings', 'Stage 6; recording unavailable')];
+      case 'thetis.tasks.schedules': return [panel('Schedules preview', 'schedules', 'Stage 6; scheduling unavailable')];
       case 'thetis.logs.engine': return [{ label: 'Foundation ready', description: 'Synthetic model initialized' }, { label: 'Diagnostic echo', description: this.diagnostics.getStatus().phase }, unavailable];
       case 'thetis.logs.sequence': return this.traceRows.map(label => ({ label }));
       case 'thetis.logs.cat': return [{ label: 'CAT unavailable', description: 'No radio transport attached' }];
