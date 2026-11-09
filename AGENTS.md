@@ -4,11 +4,11 @@
 
 ---
 
-## 0. 核心操作准则：每完成一个原子部分必须自主执行 Git 提交 (Mandatory Self-Commit Protocol)
+## 0. Mandatory AI Self-Commit Protocol
 
 > **CRITICAL MANDATE FOR AI AGENTS:**  
-> AI Agent 在本代码库中执行任何开发或重构任务时，**每当实现或完成一个独立、自洽、完整的原子部分（Atomic Part / Coherent Step），必须由 AI 自己立即执行一次 Git 提交 (`git commit`)**。  
-> 绝对严禁将多个不相关的任务或阶段性成果累积为单一庞大、模糊的提交。每次提交必须附带规范、明确表达修改意图的提交信息（遵循语义化提交风格，如 `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`），且提交信息中**绝对严禁使用任何表情符号 (Emoji)**。
+> Whenever an AI Agent implements or completes an independent, coherent, and atomic part of a task in this repository, **the AI Agent MUST immediately execute a Git commit (`git commit`) autonomously**.  
+> Never accumulate multiple unrelated tasks or incremental milestones into a single monolithic, ambiguous commit. Every commit message must be precise, professional, and descriptive (following conventional commit conventions such as `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`), and commit messages **MUST NEVER contain any emojis or pictographs**.
 
 ---
 
@@ -96,10 +96,10 @@ powershell -NoProfile -ExecutionPolicy Bypass -File ./build.ps1 -All -Config Rel
 
 ## 5. Agent Operational & Documentation Rules (NON-NEGOTIABLE)
 
-### Rule 5: 严禁使用任何表情符号 (No Emojis)
-- 所有技术文档、代码注释、提交信息 (Git commit message) 以及 Agent 输出文本中，**绝对严禁使用任何表情符号 (Emoji / Pictographs)**。
-- 必须保持文档与代码库的高度严肃、严谨与工业级技术专业性。
+### Rule 5: Strict Prohibition of Emojis (No Emojis)
+- All technical documentation, code comments, Git commit messages, and AI Agent output texts **MUST NEVER contain any emoji or pictographic characters**.
+- Maintain the highest level of rigor, seriousness, and industrial-grade technical professionalism throughout the codebase.
 
-### Rule 6: 每次完成一个完整操作即执行 Git 提交 (Git Commit per Complete Operation)
-- 每当完成一个完整、自洽、独立的技术操作（例如创建或更新架构文档、重构功能模块、修复编译问题、调整构建配置等），**必须立即执行一次 Git 提交** (`git commit`)。
-- 提交信息必须规范、明确表达修改意图（推荐遵循语义化提交风格），严禁将多个毫不相关的操作累计成一个模糊的大提交。
+### Rule 6: Immediate Git Commit per Completed Atomic Operation
+- Immediately upon completing any distinct, self-contained, and verified atomic technical operation (e.g., creating or updating architecture specifications, refactoring a module, fixing build issues, adjusting build configurations), the AI Agent **MUST execute a Git commit (`git commit`) right away**.
+- Commit messages must follow semantic conventions, clearly stating the exact intent and scope of the changes. Never defer commits or merge multiple unrelated tasks into an ambiguous single commit.
