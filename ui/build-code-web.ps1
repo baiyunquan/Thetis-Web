@@ -43,9 +43,12 @@ if ((& $node $pnpm --version) -ne $pnpmVersion) { throw 'Incorrect pnpm version.
 & $node (Join-Path $PSScriptRoot 'scripts/code-cache.mjs') --validate-source
 if ($LASTEXITCODE -ne 0) { throw 'Code OSS source does not match the clean qualified pin.' }
 
+$bundleValid = $false
 if (-not $RebuildCode) {
     & $node (Join-Path $PSScriptRoot 'scripts/code-cache.mjs') --check
-    if ($LASTEXITCODE -eq 0) { return }
+    $bundleValid = ($LASTEXITCODE -eq 0)
+    $depsValid = (Test-Path (Join-Path $code 'remote/node_modules')) -and (Test-Path (Join-Path $code 'build/node_modules/js-yaml'))
+    if ($bundleValid -and $depsValid) { return }
 }
 
 if (-not $SkipInstall) {
@@ -60,16 +63,20 @@ if (-not $SkipInstall) {
     }
 }
 
-# Upstream's bundler deletes this output directory. Verify its absolute boundary first.
-$bundle = [IO.Path]::GetFullPath((Join-Path $code 'out-vscode-web'))
-if ((Split-Path $bundle -Parent) -ne [IO.Path]::GetFullPath($code)) { throw 'Invalid bundle output path.' }
-Push-Location $code
-try {
-    $font = Join-Path $code 'src/vs/base/browser/ui/codicons/codicon/codicon.ttf'
-    Copy-Item -LiteralPath (Join-Path $code 'node_modules/@vscode/codicons/dist/codicon.ttf') -Destination $font -Force
-    & $node --max-old-space-size=16384 build/next/index.ts bundle --target web --out out-vscode-web --nls
-    if ($LASTEXITCODE -ne 0) { throw 'Code OSS web compilation failed.' }
-} finally { Pop-Location }
-& $node (Join-Path $PSScriptRoot 'scripts/code-cache.mjs') --write
-if ($LASTEXITCODE -ne 0) { throw 'Code OSS browser cache stamp failed.' }
-Write-Host 'Code OSS browser bundle built. The thetis_ui target builds and packages application panels.'
+if (-not $bundleValid) {
+    # Upstream's bundler deletes this output directory. Verify its absolute boundary first.
+    $bundle = [IO.Path]::GetFullPath((Join-Path $code 'out-vscode-web'))
+    if ((Split-Path $bundle -Parent) -ne [IO.Path]::GetFullPath($code)) { throw 'Invalid bundle output path.' }
+    Push-Location $code
+    try {
+        $font = Join-Path $code 'src/vs/base/browser/ui/codicons/codicon/codicon.ttf'
+        Copy-Item -LiteralPath (Join-Path $code 'node_modules/@vscode/codicons/dist/codicon.ttf') -Destination $font -Force
+        & $node --max-old-space-size=16384 build/next/index.ts bundle --target web --out out-vscode-web --nls
+        if ($LASTEXITCODE -ne 0) { throw 'Code OSS web compilation failed.' }
+    } finally { Pop-Location }
+    & $node (Join-Path $PSScriptRoot 'scripts/code-cache.mjs') --write
+    if ($LASTEXITCODE -ne 0) { throw 'Code OSS browser cache stamp failed.' }
+    Write-Host 'Code OSS browser bundle built. The thetis_ui target builds and packages application panels.'
+} else {
+    Write-Host 'Reusing qualified Code OSS browser bundle with refreshed dependencies.'
+}
