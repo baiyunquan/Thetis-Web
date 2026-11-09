@@ -127,6 +127,7 @@ if(ENABLE_MANAGED_BUILD)
             "${CMAKE_CURRENT_SOURCE_DIR}/Project Files/Source/Console/Thetis.csproj"
             "-c" "$<CONFIG>"
             "-p:Platform=${THETIS_PLATFORM}"
+            "-p:UseSharedCompilation=true"
         )
     elseif(MSBUILD_EXECUTABLE)
         message(STATUS "Using MSBuild for managed build: ${MSBUILD_EXECUTABLE}")
@@ -135,6 +136,7 @@ if(ENABLE_MANAGED_BUILD)
             "${CMAKE_CURRENT_SOURCE_DIR}/Project Files/Source/Console/Thetis.csproj"
             "/p:Configuration=$<CONFIG>"
             "/p:Platform=${THETIS_PLATFORM}"
+            "/p:UseSharedCompilation=true"
             "/m"
         )
     elseif(DOTNET_EXECUTABLE)
@@ -145,6 +147,7 @@ if(ENABLE_MANAGED_BUILD)
             "${CMAKE_CURRENT_SOURCE_DIR}/Project Files/Source/Console/Thetis.csproj"
             "-c" "$<CONFIG>"
             "-p:Platform=${THETIS_PLATFORM}"
+            "-p:UseSharedCompilation=true"
         )
     endif()
 

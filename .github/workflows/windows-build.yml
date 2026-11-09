@@ -15,12 +15,164 @@ permissions:
   contents: read
 
 jobs:
-  build:
-    name: Build Thetis (Windows x64)
+  # Stage 1: Dependency Preparation and Cache Read/Write Separation
+  prepare-dependencies:
+    name: "Stage 1: Prepare Dependencies & Cache"
     runs-on: windows-latest
     defaults:
       run:
         shell: powershell
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: false
+
+      - name: Checkout submodules shallowly
+        run: |
+          git submodule update --init --recursive --depth 1
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore NuGet packages cache (read)
+        id: cache-nuget
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            Project Files/Source/packages
+            ${{ env.LOCALAPPDATA }}/NuGet/Cache
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Project Files/Source/Console/packages.config') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore build tools cache (read)
+        id: cache-tools
+        uses: actions/cache/restore@v4
+        with:
+          path: build/tools
+          key: ${{ runner.os }}-build-tools-${{ hashFiles('submodules/vscode/.nvmrc', 'submodules/vscode/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-tools-
+
+      - name: Restore UI node modules cache (read)
+        id: cache-ui-modules
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ui/node_modules
+            build/ui-dependencies.sha256
+          key: ${{ runner.os }}-ui-node-modules-${{ hashFiles('ui/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-ui-node-modules-
+
+      - name: Restore pnpm store cache (read)
+        id: cache-pnpm-store
+        uses: actions/cache/restore@v4
+        with:
+          path: ${{ env.LOCALAPPDATA }}/pnpm/store
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('ui/pnpm-lock.yaml', 'submodules/vscode/pnpm-lock.yaml', 'submodules/vscode/build/pnpm-lock.yaml', 'submodules/vscode/remote/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Restore Code OSS bundle and dependencies cache (read)
+        id: cache-vscode-web
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            submodules/vscode/node_modules
+            submodules/vscode/build/node_modules
+            submodules/vscode/remote/node_modules
+            submodules/vscode/out-vscode-web
+            build/code-cache.json
+          key: ${{ runner.os }}-vscode-web-${{ hashFiles('submodules/vscode/.nvmrc', 'submodules/vscode/package.json', 'submodules/vscode/pnpm-lock.yaml', 'submodules/vscode/build/pnpm-lock.yaml', 'submodules/vscode/remote/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-vscode-web-
+
+      - name: Resolve missing NuGet packages
+        if: steps.cache-nuget.outputs.cache-hit != 'true'
+        run: |
+          Write-Host "[INFO] Restoring NuGet dependencies..."
+          $nugetDir = "$env:LOCALAPPDATA\Microsoft\MSBuild\NuGet"
+          if (-not (Test-Path $nugetDir)) { New-Item -ItemType Directory -Path $nugetDir -Force | Out-Null }
+          $nugetPath = Join-Path $nugetDir "nuget.exe"
+          if (-not (Test-Path $nugetPath)) {
+            [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
+            Invoke-WebRequest -Uri "https://dist.nuget.org/win-x86-commandline/latest/nuget.exe" -OutFile $nugetPath
+          }
+          & $nugetPath restore "Project Files/Source/Console/Thetis.csproj" -PackagesDirectory "Project Files/Source/packages"
+
+      - name: Resolve missing Code OSS browser bundle and tools
+        if: steps.cache-vscode-web.outputs.cache-hit != 'true' || steps.cache-tools.outputs.cache-hit != 'true'
+        run: |
+          Write-Host "[INFO] Preparing Code OSS browser bundle and portable tools..."
+          powershell -NoProfile -ExecutionPolicy Bypass -File ./ui/build-code-web.ps1
+
+      - name: Resolve missing UI frontend node modules
+        if: steps.cache-ui-modules.outputs.cache-hit != 'true'
+        run: |
+          Write-Host "[INFO] Installing UI frontend node modules..."
+          powershell -NoProfile -ExecutionPolicy Bypass -File ./ui/build-ui.ps1
+
+      - name: Save NuGet packages cache (write)
+        if: steps.cache-nuget.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            Project Files/Source/packages
+            ${{ env.LOCALAPPDATA }}/NuGet/Cache
+          key: ${{ steps.cache-nuget.outputs.cache-primary-key || format('{0}-nuget-{1}', runner.os, hashFiles('Project Files/Source/Console/packages.config')) }}
+
+      - name: Save build tools cache (write)
+        if: steps.cache-tools.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: build/tools
+          key: ${{ steps.cache-tools.outputs.cache-primary-key || format('{0}-build-tools-{1}', runner.os, hashFiles('submodules/vscode/.nvmrc', 'submodules/vscode/package.json')) }}
+
+      - name: Save UI node modules cache (write)
+        if: steps.cache-ui-modules.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            ui/node_modules
+            build/ui-dependencies.sha256
+          key: ${{ steps.cache-ui-modules.outputs.cache-primary-key || format('{0}-ui-node-modules-{1}', runner.os, hashFiles('ui/pnpm-lock.yaml')) }}
+
+      - name: Save pnpm store cache (write)
+        if: steps.cache-pnpm-store.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: ${{ env.LOCALAPPDATA }}/pnpm/store
+          key: ${{ steps.cache-pnpm-store.outputs.cache-primary-key || format('{0}-pnpm-store-{1}', runner.os, hashFiles('ui/pnpm-lock.yaml', 'submodules/vscode/pnpm-lock.yaml', 'submodules/vscode/build/pnpm-lock.yaml', 'submodules/vscode/remote/pnpm-lock.yaml')) }}
+
+      - name: Save Code OSS bundle and dependencies cache (write)
+        if: steps.cache-vscode-web.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with:
+          path: |
+            submodules/vscode/node_modules
+            submodules/vscode/build/node_modules
+            submodules/vscode/remote/node_modules
+            submodules/vscode/out-vscode-web
+            build/code-cache.json
+          key: ${{ steps.cache-vscode-web.outputs.cache-primary-key || format('{0}-vscode-web-{1}', runner.os, hashFiles('submodules/vscode/.nvmrc', 'submodules/vscode/package.json', 'submodules/vscode/pnpm-lock.yaml', 'submodules/vscode/build/pnpm-lock.yaml', 'submodules/vscode/remote/pnpm-lock.yaml')) }}
+
+  # Stage 2: Core Compilation via Resident Roslyn Compiler Server (Strictly Read-Only Cache)
+  compile-thetis:
+    name: "Stage 2: Compile Thetis (Roslyn Server & Native)"
+    needs: prepare-dependencies
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: powershell
+    env:
+      MSBUILDUSESERVER: '1'
+      DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER: '0'
 
     steps:
       - name: Checkout repository
@@ -43,8 +195,8 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Cache NuGet packages
-        uses: actions/cache@v4
+      - name: Restore NuGet packages cache (read-only)
+        uses: actions/cache/restore@v4
         with:
           path: |
             Project Files/Source/packages
@@ -53,16 +205,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-nuget-
 
-      - name: Cache build tools
-        uses: actions/cache@v4
+      - name: Restore build tools cache (read-only)
+        uses: actions/cache/restore@v4
         with:
           path: build/tools
           key: ${{ runner.os }}-build-tools-${{ hashFiles('submodules/vscode/.nvmrc', 'submodules/vscode/package.json') }}
           restore-keys: |
             ${{ runner.os }}-build-tools-
 
-      - name: Cache UI node modules
-        uses: actions/cache@v4
+      - name: Restore UI node modules cache (read-only)
+        uses: actions/cache/restore@v4
         with:
           path: |
             ui/node_modules
@@ -71,16 +223,16 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-ui-node-modules-
 
-      - name: Cache pnpm store
-        uses: actions/cache@v4
+      - name: Restore pnpm store cache (read-only)
+        uses: actions/cache/restore@v4
         with:
           path: ${{ env.LOCALAPPDATA }}/pnpm/store
           key: ${{ runner.os }}-pnpm-store-${{ hashFiles('ui/pnpm-lock.yaml', 'submodules/vscode/pnpm-lock.yaml', 'submodules/vscode/build/pnpm-lock.yaml', 'submodules/vscode/remote/pnpm-lock.yaml') }}
           restore-keys: |
             ${{ runner.os }}-pnpm-store-
 
-      - name: Cache Code OSS bundle and dependencies
-        uses: actions/cache@v4
+      - name: Restore Code OSS bundle and dependencies cache (read-only)
+        uses: actions/cache/restore@v4
         with:
           path: |
             submodules/vscode/node_modules
@@ -92,9 +244,75 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-vscode-web-
 
-      - name: Build Thetis (All Targets, Release)
+      - name: Build Thetis with resident Roslyn compiler server
         run: |
           powershell -NoProfile -ExecutionPolicy Bypass -File ./build.ps1 -All -Config Release
+
+      - name: Upload compiled binaries for test stage
+        uses: actions/upload-artifact@v4
+        with:
+          name: thetis-staged-release
+          path: |
+            Project Files/bin/x64/Release
+            build/bin
+          if-no-files-found: error
+
+  # Stage 3: Verification, Packaging and Artifact Publishing (Strictly Read-Only Cache)
+  test-and-package:
+    name: "Stage 3: Verification & Packaging"
+    needs: compile-thetis
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: powershell
+    env:
+      MSBUILDUSESERVER: '1'
+      DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER: '0'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: false
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Restore NuGet packages cache (read-only)
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            Project Files/Source/packages
+            ${{ env.LOCALAPPDATA }}/NuGet/Cache
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Project Files/Source/Console/packages.config') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Restore build tools cache (read-only)
+        uses: actions/cache/restore@v4
+        with:
+          path: build/tools
+          key: ${{ runner.os }}-build-tools-${{ hashFiles('submodules/vscode/.nvmrc', 'submodules/vscode/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-tools-
+
+      - name: Restore UI node modules cache (read-only)
+        uses: actions/cache/restore@v4
+        with:
+          path: |
+            ui/node_modules
+            build/ui-dependencies.sha256
+          key: ${{ runner.os }}-ui-node-modules-${{ hashFiles('ui/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-ui-node-modules-
+
+      - name: Download compiled binaries from compile stage
+        uses: actions/download-artifact@v4
+        with:
+          name: thetis-staged-release
 
       - name: Run Thetis.Hosting C# Tests
         run: |
@@ -104,7 +322,7 @@ jobs:
         run: |
           & './build/tools/node-v24.22.1-win-x64/node.exe' ui/scripts/test.mjs unit
 
-      - name: Upload Thetis Build Artifacts
+      - name: Publish Thetis Release Package
         uses: actions/upload-artifact@v4
         with:
           name: Thetis-Release-x64

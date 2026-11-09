@@ -1,0 +1,6 @@
+<Project>
+  <PropertyGroup>
+    <UseSharedCompilation>true</UseSharedCompilation>
+    <ServerGarbageCollection>true</ServerGarbageCollection>
+  </PropertyGroup>
+</Project>
