@@ -46,6 +46,20 @@ namespace Thetis.Hosting
                 build = new JObject { ["codeCommit"] = (string)identity["codeCommit"] ?? "unknown", ["uiBuildId"] = (string)identity["uiBuildId"] ?? "unknown" };
             }
             else build = new JObject { ["codeCommit"] = "unknown", ["uiBuildId"] = "unknown" };
+
+            // Register any static assets located in the root web folder (e.g. TOTW WebUI)
+            if (Directory.Exists(root))
+            {
+                foreach (string filePath in Directory.GetFiles(root, "*", SearchOption.AllDirectories))
+                {
+                    string relative = filePath.Substring(root.Length).Replace('\\', '/');
+                    if (relative.StartsWith("/code/", StringComparison.OrdinalIgnoreCase)) continue;
+                    if (SafePath(relative))
+                    {
+                        assets.Add(relative);
+                    }
+                }
+            }
         }
 
         // Dispatch runs before TCPIPtciSocketListener construction and owns browser sockets.
@@ -172,7 +186,17 @@ namespace Thetis.Hosting
                 if (!AllowedOrigin(origin, tls)) { HostHttpResponse.Write(stream, 403, "Forbidden", head: head); return; }
                 cors = "Access-Control-Allow-Origin: " + origin + "\r\nVary: Origin\r\n";
             }
-            if (request.Path == "/") { HostHttpResponse.Write(stream, 302, "Found", new byte[0], head, extra: "Location: /code/\r\n"); return; }
+            if (request.Path == "/")
+            {
+                if (assets.Contains("/index.html") || assets.Contains("/totw.html"))
+                {
+                    string target = assets.Contains("/index.html") ? "/index.html" : "/totw.html";
+                    EmbeddedWebContent.SendResponse(stream, "GET " + target + " HTTP/1.1\r\n", root, cors);
+                    return;
+                }
+                HostHttpResponse.Write(stream, 302, "Found", new byte[0], head, extra: "Location: /code/\r\n");
+                return;
+            }
             if (request.Path == "/code") { HostHttpResponse.Write(stream, 302, "Found", new byte[0], head, extra: "Location: /code/\r\n"); return; }
             if (request.Path == "/code/host-config.json")
             {

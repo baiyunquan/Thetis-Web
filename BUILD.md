@@ -144,22 +144,23 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tests/Thetis.Hosting.Tests/r
 
 ## 8. Launching Thetis
 
-### Mode A: Code OSS Browser WebUI Diagnostic (No Radio Required)
+### Mode A: Web Host Diagnostic (No Radio Required)
 Starts Thetis loopback Web and WebSocket host on port 50001 without initializing SDR hardware:
 ```powershell
 & './Project Files/bin/x64/Release/Thetis.exe' -code-demo
 ```
-- Browser URL: [http://localhost:50001/code/](http://localhost:50001/code/)
-- Health Check: [http://localhost:50001/code/health](http://localhost:50001/code/health)
+- **Thetis On The Web (TOTW)** (Complete Web SDR Radio): [http://localhost:50001/](http://localhost:50001/) or [http://localhost:50001/totw.html](http://localhost:50001/totw.html)
+- **Code OSS Modular Workbench** (Step 01 Developer Shell): [http://localhost:50001/code/](http://localhost:50001/code/)
+- **Health Check API**: [http://localhost:50001/code/health](http://localhost:50001/code/health)
 
 ### Mode B: Full Radio Operation with WebUI
 Starts SDR hardware processing and enables WebUI server on port 50001:
 ```powershell
 & './Project Files/bin/x64/Release/Thetis.exe' -web
 ```
-- Code OSS UI: [http://localhost:50001/code/](http://localhost:50001/code/)
-- Classic TOTW WebUI: [http://localhost:50001/](http://localhost:50001/)
-- Desktop WinForms UI: Displayed on local screen.
+- **Thetis On The Web (TOTW)**: [http://localhost:50001/](http://localhost:50001/)
+- **Code OSS Workbench**: [http://localhost:50001/code/](http://localhost:50001/code/)
+- **Desktop WinForms UI**: Displayed on local screen.
 
 ### Mode C: Standard Desktop WinForms Mode
 ```powershell

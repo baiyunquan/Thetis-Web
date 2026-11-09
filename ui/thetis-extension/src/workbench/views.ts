@@ -67,7 +67,12 @@ export class FoundationWorkbench implements vscode.Disposable {
     this.status.tooltip = 'Synthetic console. Radio unavailable. Click to open Console.';
     this.status.command = 'thetis.openConsole';
     this.status.show();
-    this.disposables.push(this.status, this.output, this.diagnostics);
+    const totwStatus = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Left, 140);
+    totwStatus.text = '$(radio-tower) Open Web SDR (TOTW)';
+    totwStatus.tooltip = 'Launch full Thetis On The Web SDR client in browser (Waterfall, Panadapter, Audio)';
+    totwStatus.command = 'thetis.openTotw';
+    totwStatus.show();
+    this.disposables.push(this.status, totwStatus, this.output, this.diagnostics);
     for (const view of FOUNDATION_VIEWS) {
       if (view.type === 'webview') {
         this.disposables.push(vscode.window.registerWebviewViewProvider(view.id, {
@@ -91,6 +96,9 @@ export class FoundationWorkbench implements vscode.Disposable {
     }));
     const command = (id: string, handler: (...args: any[]) => unknown) => this.disposables.push(vscode.commands.registerCommand(id, handler));
     command('thetis.openConsole', () => this.openPanel('console'));
+    command('thetis.openTotw', () => {
+      void vscode.env.openExternal(vscode.Uri.parse('http://127.0.0.1:50001/'));
+    });
     command('thetis.openConsoleBeside', () => this.openPanel('console', { beside: true }));
     command('thetis.openPanel', async (id?: string) => {
       const selected = id && id in PANEL_TITLES ? id as PanelId : (await vscode.window.showQuickPick(Object.keys(PANEL_TITLES))) as PanelId | undefined;
@@ -109,10 +117,8 @@ export class FoundationWorkbench implements vscode.Disposable {
       if (selected) this.model.dispatch({ type: 'setDensity', density: selected });
     });
     this.diagnostics.connect();
-    if (!context.workspaceState.get<boolean>('thetis.foundation.consoleOpened.v1')) {
-      this.openPanel('console');
-      void context.workspaceState.update('thetis.foundation.consoleOpened.v1', true);
-    }
+    // Ensure Thetis Console is open on startup so the workbench is never empty
+    this.openPanel('console');
     this.trace('Foundation activated: synthetic controls only; radio unavailable');
   }
   openPanel(id: PanelId, options: { beside?: boolean } = {}) {
@@ -182,7 +188,7 @@ export class FoundationWorkbench implements vscode.Disposable {
     const command = (label: string, command: string, description?: string): NavigationItem => ({ label, description, command: { command, title: label } });
     const unavailable = { label: 'Radio unavailable', description: 'Foundation / Demo' };
     switch (id) {
-      case 'thetis.memories.navigation': return [panel('Memory workspace', 'memories', 'Synthetic presets'), panel('Open Console', 'console'), unavailable];
+      case 'thetis.memories.navigation': return [panel('Open Console', 'console'), command('Open Web SDR (TOTW)', 'thetis.openTotw', 'Full Panadapter & Audio'), panel('Memory workspace', 'memories', 'Synthetic presets'), unavailable];
       case 'thetis.audio.navigation': return [panel('Audio controls', 'audio', 'Synthetic AF / AGC'), { label: 'Audio devices', description: 'Unavailable in Foundation' }, unavailable];
       case 'thetis.rf.navigation': return [panel('RF controls', 'rf'), { label: 'PureSignal', description: 'Radio unavailable' }, { label: 'Diversity', description: 'Radio unavailable' }];
       case 'thetis.display.navigation': return [panel('Display preferences', 'display'), command('Select radio skin', 'thetis.selectRadioSkin'), command('Control density', 'thetis.selectDensity')];

@@ -14,6 +14,7 @@
   "contributes": {
     "commands": [
       { "command": "thetis.openConsole", "title": "Thetis: Open Console", "icon": "$(device-desktop)" },
+      { "command": "thetis.openTotw", "title": "Thetis: Open SDR WebUI (TOTW)", "icon": "$(radio-tower)" },
       { "command": "thetis.openConsoleBeside", "title": "Thetis: Open Console Beside" },
       { "command": "thetis.openPanel", "title": "Thetis: Open Radio Panel" },
       { "command": "thetis.restoreDefaultLayout", "title": "Thetis: Restore Default Layout" },
