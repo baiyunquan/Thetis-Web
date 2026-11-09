@@ -1,14 +1,21 @@
 # Thetis-Web
 
 [![Platform](https://img.shields.io/badge/Platform-Windows%20x64-blue.svg)](https://microsoft.com/windows)
-[![Build System](https://img.shields.io/badge/Build-CMake%20%2B%20MSVC%20%2B%20Ninja-brightgreen.svg)](CMakeLists.txt)
-[![Managed Runtime](https://img.shields.io/badge/.NET-4.8%20%2F%20CLI%20SDK-purple.svg)](Project%20Files/Source/Console/Thetis.csproj)
-[![WebUI](https://img.shields.io/badge/WebUI-Thetis%20On%20The%20Web-orange.svg)](submodules/thetis-on-the-web)
-[![TCI Protocol](https://img.shields.io/badge/TCI-v2.0%20(Port%2050001)-green.svg)](Project%20Files/Source/Console/TCIServer.cs)
+[![Build System](https://img.shields.io/badge/Build-CMake%20%2B%20MSVC%20%2B%20Ninja-brightgreen.svg)](file:///d:/workspace/Thetis/CMakeLists.txt)
+[![Managed Runtime](https://img.shields.io/badge/.NET-4.8%20%2F%20Roslyn%20SDK-purple.svg)](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Thetis.csproj)
+[![Active WebUI](https://img.shields.io/badge/Active%20WebUI-Code%20OSS%201.146.0-orange.svg)](file:///d:/workspace/Thetis/ui/README.md)
+[![Legacy WebUI](https://img.shields.io/badge/Legacy%20WebUI-TOTW%20(Archived)-lightgrey.svg)](file:///d:/workspace/Thetis/submodules/thetis-on-the-web)
+[![TCI Protocol](https://img.shields.io/badge/TCI-v2.0%20(Port%2050001)-green.svg)](file:///d:/workspace/Thetis/Project%20Files/Source/Console/TCIServer.cs)
+[![CI Workflow](https://img.shields.io/badge/GitHub%20Actions-Windows%20Build-blue.svg)](file:///d:/workspace/Thetis/.github/workflows/windows-build.yml)
 
-**Thetis-Web** 是专为 OpenHPSDR / ANAN 系列软件无线电 (SDR) 打造的现代化、高集成度版本。本项目**完全脱离了庞大笨重的 Visual Studio IDE** 依赖，重构为纯 **CMake + MSVC + .NET CLI** 构建流水线，并在 VS Code 中提供开箱即用的一流开发、构建与调试体验。
+**Thetis-Web** 是专为 OpenHPSDR / ANAN 系列软件无线电 (SDR) 打造的现代化、高集成度版本。本项目**完全脱离了 Visual Studio IDE 方案文件** 依赖，全面重构为纯 **CMake + MSVC + .NET CLI** 现代构建流水线，并在 VS Code 中提供开箱即用的一流开发、构建、调试与测试体验。
 
-同时，本项目内置深度集成了 [Thetis On The Web (TOTW)](https://github.com/baiyunquan/thetis-on-the-web) 网页端客户端，通过创新的**单端口多路复用网络架构（Port 50001）**，无需任何额外 Node.js / Python Web 服务，直接在浏览器中实现高分辨率 IQ 频谱瀑布流、双向 TCI 音频串流（RX 扬声器 + TX 浏览器麦克风发射）及全功能电台控制。
+> [!IMPORTANT]
+> **重要架构声明：旧版 WebUI 已正式进入 Legacy 历史归档状态**
+>
+> 早期子模块 [thetis-on-the-web](file:///d:/workspace/Thetis/submodules/thetis-on-the-web)（TOTW / `totw.html`）现已**正式进入 Legacy 历史归档状态，仅作为算法与架构设计参考保留于源码树，不再参与任何编译、构建、测试与运行时部署**。
+>
+> 当前项目**唯一活跃且正式维护**的浏览器端工作台为 **Thetis Code OSS Foundation**（基于 Code OSS 1.146.0 深度定制，前端代码位于 [ui/](file:///d:/workspace/Thetis/ui/)，运行时部署于 [Project Files/bin/x64/Release/web/code/](file:///d:/workspace/Thetis/Project%20Files/bin/x64/Release/web/code/)，由 [CodeHost.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Hosting/CodeHost.cs) 在单端口 50001 提供 HTTP/WebSocket 多路复用服务）。
 
 ---
 
@@ -21,12 +28,18 @@
   - [1. 一键脚本构建 (推荐)](#1-一键脚本构建-推荐)
   - [2. VS Code 原生集成构建](#2-vs-code-原生集成构建)
   - [3. CLI 分步手动构建](#3-cli-分步手动构建)
+  - [4. Code OSS Web 前端独立构建](#4-code-oss-web-前端独立构建)
   - [构建产物目录结构](#构建产物目录结构)
+- [GitHub Actions 云端 CI 构建流水线](#github-actions-云端-ci-构建流水线)
+  - [流水线设计特色](#流水线设计特色)
+  - [触发方式](#触发方式)
+  - [多层缓存与常驻编译服务优化](#多层缓存与常驻编译服务优化)
 - [程序启动指南](#程序启动指南)
-  - [方式一：启动标准桌面版 (Desktop Mode)](#方式一启动标准桌面版-desktop-mode)
-  - [方式二：启动 WebUI 网页控制模式 (Web Remote Mode)](#方式二启动-webui-网页控制模式-web-remote-mode)
+  - [方式一：启动 Code OSS Foundation 演示诊断模式 (推荐免硬件)](#方式一启动-code-oss-foundation-演示诊断模式-推荐免硬件)
+  - [方式二：启动 WinForms 并启用内嵌 Web 服务](#方式二启动-winforms-并启用内嵌-web-服务)
+  - [方式三：启动标准桌面版 (Desktop Mode)](#方式三启动标准桌面版-desktop-mode)
 - [WebUI 单端口多路复用机制详解](#webui-单端口多路复用机制详解)
-- [WebUI 常用快捷键](#webui-常用快捷键)
+- [WebUI 常用操作与快捷键](#webui-常用操作与快捷键)
 - [Git Submodule 子模块管理](#git-submodule-子模块管理)
 - [常见问题排查 (FAQ)](#常见问题排查-faq)
 - [许可证与鸣谢](#许可证与鸣谢)
@@ -35,22 +48,27 @@
 
 ## 核心特色
 
-1. **彻底摆脱 Visual Studio IDE 束缚**：
-   - 清理所有旧版 `.sln`、`.vcxproj` 及 `.vs/` 冗余配置文件；
-   - 原生 C/C++ 算法与硬件核心（`PA19.dll`、`wdsp.dll`、`cmASIO.dll`、`ChannelMaster.dll`）统一使用现代 [CMakeLists.txt](file:///d:/workspace/Thetis/CMakeLists.txt) 管理，支持 Ninja 并行加速；
-   - 托管层 C# 程序通过现代 `dotnet build` 工具链直接编译。
-2. **VS Code 优先的深度集成**：
-   - 预置 [.vscode/tasks.json](file:///d:/workspace/Thetis/.vscode/tasks.json)：`Ctrl + Shift + B` 一键多任务编译；
+1. **彻底解耦 Visual Studio IDE**：
+   - 清除所有旧版 `.sln`、`.vcxproj`、`.vcxproj.filters` 及 `.vs/` 冗余配置文件；
+   - 原生 C/C++ 算法与硬件核心（[`PA19.dll`](file:///d:/workspace/Thetis/cmake/PA19.cmake)、[`wdsp.dll`](file:///d:/workspace/Thetis/Project%20Files/Source/wdsp/)、[`cmASIO.dll`](file:///d:/workspace/Thetis/Project%20Files/Source/cmASIO/)、[`ChannelMaster.dll`](file:///d:/workspace/Thetis/Project%20Files/Source/ChannelMaster/)）统一通过现代 [CMakeLists.txt](file:///d:/workspace/Thetis/CMakeLists.txt) 管理，支持 Ninja 并行加速；
+   - 托管层 C# 程序通过现代 .NET CLI (`dotnet build`) 直接编译。
+2. **VS Code 优先的一流开发体验**：
+   - 预置 [.vscode/tasks.json](file:///d:/workspace/Thetis/.vscode/tasks.json)：<kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>B</kbd> 一键多任务编译；
    - 预置 [.vscode/launch.json](file:///d:/workspace/Thetis/.vscode/launch.json)：一键启动、混合代码断点调试；
-   - 预置推荐插件配置与路径搜索。
-3. **内置 WebUI 零配置即开即用**：
-   - 将 [thetis-on-the-web](file:///d:/workspace/Thetis/submodules/thetis-on-the-web) 作为 Git Submodule 直接嵌入主仓库；
-   - 编译系统自动将 WebUI 静态文件同步至运行目录 `web/`；
-   - 主程序内建 HTTP 静态服务器与 WebSocket 服务，单个端口（50001）承载页面访问与双向 TCI 高速通信。
-4. **浏览器标准安全源（Secure Context）**：
-   - 通过 `http://localhost:50001/` 访问，浏览器自动授予麦克风与 Web Audio 高级音频权限，无缝开启浏览器在线发射（TX）与接收（RX）。
-
----
+   - 预置完整路径检索与源码符号关联。
+3. **Thetis Code OSS 现代浏览器工作台 (Stage 1 Foundation)**：
+   - 固定版本的上游 Code OSS 1.146.0 提供原生工作台能力，Thetis 专用扩展与嵌入宿主源码由父仓库独立维护；
+   - 深度支持视图拖拽移动、合成 Console 编辑器标签页、Classic / Midnight 双无线电外观皮肤、多档显示密度与布局持久化存储；
+   - 嵌入式 C# 单端口（50001）多路复用服务直接提供资源与诊断连接，无需启动外部 Node.js 或 Python Web 服务；
+   - 提供免硬件运行的演示诊断模式 (`Thetis.exe -code-demo`)，便于快速调试与界面演化。
+4. **工业级 GitHub Actions 云端 CI 构建流水线**：
+   - 采用单 Job 三阶段流水线 ([.github/workflows/windows-build.yml](file:///d:/workspace/Thetis/.github/workflows/windows-build.yml))：Phase 1 还原与多层原生缓存恢复、Phase 2 编译与双重自动化测试、Phase 3 过期缓存清理与新缓存写入；
+   - 原生分层缓存（NuGet、构建工具、UI 依赖、pnpm store、Code OSS 预编译包），将云端构建耗时压缩至 3 分钟级；
+   - 全面启用 Roslyn 编译器常驻服务 (`Directory.Build.props` 设置 `UseSharedCompilation=true` 与 `MSBUILDUSESERVER=1`)，大幅加速 C# 编译；
+   - 采用主动手动触发 (`workflow_dispatch`) 与 PR 审查双重触发机制，防止无意义的高频触发消耗 CI 额度，且内置自动化过期缓存清理。
+5. **历史 WebUI 正式归档 (Legacy Reference Only)**：
+   - 旧版 [thetis-on-the-web](file:///d:/workspace/Thetis/submodules/thetis-on-the-web) 完整归档，保留 Vanilla JS、Web Audio 及 Canvas 2D 实现仅供技术演进与算法对比参考；
+   - 构建系统不再将旧版 WebUI 复制或部署到发行目录中。
 
 ---
 
@@ -63,23 +81,25 @@
 - **原生通道路由与网络引擎**：[ChannelMaster](file:///d:/workspace/Thetis/Project%20Files/Source/ChannelMaster/) (Protocol 1 & 2, WinSock2, 无锁环形缓冲区)
 - **底层音频驱动**：[cmASIO](file:///d:/workspace/Thetis/Project%20Files/Source/cmASIO/) (Steinberg ASIO SDK) 与 [PA19](file:///d:/workspace/Thetis/cmake/PA19.cmake) (PortAudio 19.7, WASAPI, WDM-KS, MME)
 - **托管 C# 应用程序**：[Thetis Console](file:///d:/workspace/Thetis/Project%20Files/Source/Console/) (SharpDX DirectX 11/2D, SkiaSharp, NAudio, WinForms)
-- **单端口 50001 服务与 WebUI 客户端**：[TCIServer.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/TCIServer.cs) 与 [thetis-on-the-web](file:///d:/workspace/Thetis/submodules/thetis-on-the-web)
-- **系统与第三方库接口矩阵**：全景技术栈依赖清单与端到端数据流拓扑图
+- **单端口 50001 服务与宿主**：[TCIServer.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/TCIServer.cs)、[CodeHost.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Hosting/CodeHost.cs)
+- **现代浏览器工作台**：[Thetis Extension & Host](file:///d:/workspace/Thetis/ui/) (Code OSS 1.146.0, TypeScript)
+- **历史归档 WebUI (Legacy)**：[thetis-on-the-web](file:///d:/workspace/Thetis/submodules/thetis-on-the-web/) (仅保留源码作参考)
 
 ---
 
 ## 环境与依赖要求
 
-在开始构建前，请确保系统已安装以下工具：
+在开始本地构建前，请确保系统已安装以下工具：
 
 | 工具 / 依赖 | 最低要求版本 | 说明 |
 | :--- | :--- | :--- |
 | **操作系统** | Windows 10 / 11 64-bit | 纯 64 位 (x64) 运行环境 |
 | **MSVC 编译器** | Visual Studio 2022 或 Build Tools | 仅需安装 "使用 C++ 的桌面开发" 工作负载中的 MSVC v143 编译器与 Windows 10/11 SDK |
 | **CMake** | >= 3.20 | 跨平台原生构建定义工具 |
-| **Ninja** | >= 1.10 (推荐) | 超高速并行构建执行器 |
+| **Ninja** | >= 1.10 (推荐) | 高速并行构建执行器 |
 | **.NET SDK** | .NET 8.0 / 9.0 / 10.0 | 提供 `dotnet build` 命令（需包含 .NET Framework 4.8 目标包支持） |
-| **Git** | 最新版本 | 包含 submodule 支持 |
+| **Git** | 最新版本 | 包含 submodule 支持与 GitHub CLI (`gh`) |
+| **Node.js & pnpm** | Node 24.22.1 / pnpm 12.16.0 | 用于构建 Code OSS 浏览器工作台（构建脚本会自动下载并管理固定版本） |
 
 ---
 
@@ -87,7 +107,7 @@
 
 ### 1. 一键脚本构建 (推荐)
 
-仓库根目录提供了全自动环境探测与编译脚本，能自动检测 MSVC 路径、同步 Submodule、还原 NuGet 并完整编译原生动态库与 C# 程序：
+仓库根目录提供了全自动环境探测与编译脚本，能自动检测 MSVC 路径、同步 Submodule、还原 NuGet 并完整编译原生动态库、C# 程序及部署 WebUI 资源：
 
 #### 使用 PowerShell (推荐)：
 ```powershell
@@ -120,7 +140,7 @@ build.bat clean
 ```
 
 > [!TIP]
-> 运行构建脚本时，如果发现后台有未关闭的 `Thetis.exe`，脚本会自动尝试停止该进程，以防 DLL 文件锁导致 `Permission denied` 报错。
+> 运行构建脚本时，如果发现后台有未关闭的 `Thetis.exe`，脚本会自动尝试停止该进程，以防 Windows 文件锁导致 `Permission denied` 报错。
 
 ---
 
@@ -133,8 +153,10 @@ build.bat clean
   - `Build All (Debug)`：完整构建所有模块 (Debug)
   - `Build Native Core Only (CMake)`：仅增量编译原生 C/C++ DLL
   - `Build C# Thetis Only (dotnet)`：仅增量编译 C# 应用程序
+  - `Build Code OSS Browser Bundles`：准备固定版本的上游浏览器包
+  - `Build Thetis Foundation UI`：编译父仓库宿主与扩展并复用上游缓存
   - `Clean Build Directory`：清理 CMake build 缓存
-  - `Update Git Submodules`：同步更新 WebUI 等子模块代码
+  - `Update Git Submodules`：同步固定版本的子模块代码
 
 ---
 
@@ -153,11 +175,28 @@ nuget restore "Project Files/Source/Console/Thetis.csproj" -PackagesDirectory "P
 cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE_CXX_COMPILER=cl
 cmake --build build --target native_core
 
-# 4. 使用 dotnet 编译 C# 应用程序
+# 4. 使用 dotnet 编译 C# 应用程序 (开启 Roslyn 常驻编译加速)
 dotnet build "Project Files/Source/Console/Thetis.csproj" -c Release -p:Platform=x64
 
-# 5. 执行部署目标 (将 DLL 与 WebUI 同步至 bin 输出目录)
+# 5. 执行部署目标 (将 DLL 与静态 Web 资源同步至 bin 输出目录)
 cmake --build build --target stage_to_project_bin
+```
+
+---
+
+### 4. Code OSS Web 前端独立构建
+
+若需单独对浏览器端工作台扩展或嵌入宿主进行开发调试：
+
+```powershell
+# 构建上游 Code OSS 浏览器依赖包 (构建结果将被自动缓存)
+powershell -NoProfile -ExecutionPolicy Bypass -File ./ui/build-code-web.ps1
+
+# 构建 Thetis 前端扩展、主题变量与嵌入宿主
+powershell -NoProfile -ExecutionPolicy Bypass -File ./ui/build-ui.ps1
+
+# 同步静态资源到 Thetis 发行目录
+powershell -NoProfile -ExecutionPolicy Bypass -File ./ui/stage-code-web.ps1 -Destination "Project Files/bin/x64/Release/web"
 ```
 
 ---
@@ -174,23 +213,64 @@ Project Files/bin/x64/Release/
 ├── cmASIO.dll                     # 低延迟 ASIO 音频驱动层 (Native)
 ├── PA19.dll                       # PortAudio 跨平台音频接口 (Native)
 ├── web/                           # 嵌入式 WebUI 静态资源目录
-│   ├── totw.html                  # WebUI 单文件入口 (TOTW)
-│   ├── index.html                 # 软链接/重定向入口
-│   └── ...                        # 相关前端脚本与样式
+│   └── code/                      # Code OSS 运行时、Thetis 宿主与扩展资产清单
 ├── Skins/                         # 界面皮肤资源
-└── *.dll                          # C# 依赖托管库 (NAudio, Newtonsoft.Json 等)
+└── *.dll                          # C# 依赖托管库 (NAudio, SharpDX 等)
 ```
+
+---
+
+## GitHub Actions 云端 CI 构建流水线
+
+本项目在 [.github/workflows/windows-build.yml](file:///d:/workspace/Thetis/.github/workflows/windows-build.yml) 中配置了企业级自动化持续集成构建流水线。
+
+### 流水线设计特色
+
+1. **单 Job 三阶段严密架构**：
+   - **Phase 1: Environment Preparation & Cache Restoration**：初始化环境，使用 `actions/cache/restore@v4` 恢复 NuGet 包、Node/pnpm 工具链、UI 模块及 Code OSS 预编译工作台产物。
+   - **Phase 2: Compilation, Staging & Multi-Level Verification**：依次执行原生 C/C++ 编译、C# 应用程序编译、资源部署、Thetis.Hosting C# 集成测试套件与 UI 前端自动化测试。
+   - **Phase 3: Stale Cache Pruning & Cache Preservation**：测试全部通过后，自动化调用 GitHub CLI 清理过期缓存键，并通过 `actions/cache/save@v4` 保存最新缓存版本。
+2. **Roslyn 编译器常驻优化**：
+   - 在 [Directory.Build.props](file:///d:/workspace/Thetis/Directory.Build.props) 中显式声明 `<UseSharedCompilation>true</UseSharedCompilation>`，并在 CI 环境注入 `MSBUILDUSESERVER=1`，复用 Roslyn 编译进程，避免重复启动带来的 JIT 冷启动损耗。
+3. **分层原生缓存机制**：
+   - 依赖项与上游 Code OSS 预编译产物完全利用云端 GitHub Actions Cache 隔离存储，本地仓库保持纯净无冗余二进制提交。
+
+### 触发方式
+
+为了杜绝普通文档微调或日常小提交无谓消耗云端运行配额，构建流水线设定为**主动受控触发**：
+- **手动触发 (`workflow_dispatch`)**：在 GitHub 仓库页面进入 **Actions** -> 选择 **Windows Build (Consolidated Single-Job with Stale Cache Pruning)** -> 点击 **Run workflow** 执行云端全量构建。
+- **拉取请求 (`pull_request`)**：向主分支发起 PR 时自动执行全量质量与测试门禁。
 
 ---
 
 ## 程序启动指南
 
-### 方式一：启动标准桌面版 (Desktop Mode)
+### 方式一：启动 Code OSS Foundation 演示诊断模式 (推荐免硬件)
 
-1. **直接运行可执行文件**：
-   双击运行 `Project Files\bin\x64\Release\Thetis.exe`。
-2. **在 VS Code 中启动**：
-   在 VS Code 运行与调试面板选择 **"Launch Thetis (Release)"**，按 <kbd>F5</kbd> 或 <kbd>Ctrl</kbd> + <kbd>F5</kbd>。
+Stage 1 提供免连接物理无线电设备的独立诊断演示启动模式：
+
+```powershell
+& '.\Project Files\bin\x64\Release\Thetis.exe' -code-demo
+```
+
+启动后在浏览器打开：[http://localhost:50001/code/](http://localhost:50001/code/)（根路径 `/` 亦会自动重定向到 `/code/`）。
+- **可交互功能**：合成双 VFO、接收机选择 (RX1/RX2)、模式切换、滤波带宽、射频增益、Classic / Midnight 皮肤切换与自定义布局拖拽；
+- **当前状态**：Power、MOX、Tune、PTT 保持安全禁用（属于后续 Stage 2 真实控制接入阶段）；
+- **诊断端点**：健康监测接口 [http://localhost:50001/code/health](http://localhost:50001/code/health)。
+
+### 方式二：启动 WinForms 并启用内嵌 Web 服务
+
+启动标准 WinForms 电台主程序，同时在端口 50001 启用内嵌 Code OSS 服务：
+
+```powershell
+& '.\Project Files\bin\x64\Release\Thetis.exe' -web
+```
+
+### 方式三：启动标准桌面版 (Desktop Mode)
+
+直接运行原生桌面 WinForms 模式：
+1. **直接运行可执行文件**：双击运行 `Project Files\bin\x64\Release\Thetis.exe`。
+2. **在 VS Code 中启动**：在运行与调试面板选择 **"Launch Thetis (Release)"**，按 <kbd>F5</kbd>。
 
 > [!NOTE]
 > **首次启动特别说明**：
@@ -199,91 +279,62 @@ Project Files/bin/x64/Release/
 
 ---
 
-### 方式二：启动 WebUI 网页控制模式 (Web Remote Mode)
-
-Thetis-Web 完美支持在任何内网设备或移动终端的浏览器中远程操控电台：
-
-#### 1. 命令行快速拉起 WebUI
-通过添加 `-web`（或 `-tci`、`-webui`）参数启动 Thetis：
-```powershell
-.\Project Files\bin\x64\Release\Thetis.exe -web
-```
-该参数会指示 Thetis 在启动时**自动开启内置 TCI 服务器与 WebUI 静态资源服务器**（默认监听 `50001` 端口）。
-
-#### 2. 在桌面程序中手动启用
-如果你已通过常规方式打开了 Thetis 桌面版：
-1. 点击主界面菜单栏上的 **Setup** 按钮；
-2. 切换到 **CAT Control** 或 **TCI** 选项卡；
-3. 勾选 **Enable TCI Server** 复选框（默认端口保持 `50001`）；
-4. TCI 服务器与 WebUI 将即刻在后台开始监听。
-
-#### 3. 浏览器访问
-打开现代浏览器（推荐 Google Chrome、Microsoft Edge 或 Safari），输入以下地址：
-- **本机访问**：[`http://localhost:50001/`](http://localhost:50001/)
-- **局域网其它电脑/平板/手机访问**：`http://<你的电脑局域网IP>:50001/`
-
-浏览器将立即加载呈现 Thetis On The Web 交互界面：
-- 点击顶部工具栏的 **CONNECT** 按钮即可建立 WebSocket 握手；
-- 界面将实时显示高帧率 4096-pt FFT 频谱与瀑布图；
-- 浏览器扬声器自动输出电台解调音频。
-
----
-
 ## WebUI 单端口多路复用机制详解
 
-传统的 SDR Web 控制方案通常需要部署两个独立服务：一个负责渲染网页的 HTTP Web 服务器（如 Node.js / Nginx），另一个是电台的控制端口（如 TCI 50001）。这带来了安装依赖多、跨域端口冲突等问题。
+Thetis 嵌入式服务在端口 50001 实现 HTTP/HTTPS 静态资源与 WebSocket 协议的智能分流：
 
-**Thetis-Web 采用创新的单端口多路复用架构**：
 ```mermaid
 flowchart LR
-    Browser["现代浏览器 (Chrome/Edge/Safari)"]
-    Port["Thetis 50001 端口 (TCIServer.cs)"]
-    WebFolder["本地静态目录 (bin/web/totw.html)"]
-    SDRCore["Thetis 信号处理与硬件控制核心"]
+    Browser["Code OSS 浏览器工作台<br/>(Thetis Extension)"]
+    Port["Thetis :50001<br/>CodeHost / TCIServer"]
+    Files["web/code/<br/>静态资源清单校验"]
+    Echo["/code/diagnostics<br/>专用诊断回显通道"]
+    TCI["标准 TCI v2.0<br/>全双工通道"]
+    LegacyClient["传统外部 TCI 客户端"]
 
-    Browser -- "1. 浏览器打开: GET /" --> Port
-    Port -- "读取并返回 totw.html 静态资源" --> WebFolder
-    WebFolder -. "渲染交互界面" .-> Browser
-
-    Browser -- "2. 点击 Connect: Upgrade: websocket" --> Port
-    Port <--> "3. TCI v2.0 全双工长连接 (IQ/音频流 & 控制指令)" <--> SDRCore
+    Browser -- "HTTP / HTTPS 静态资源请求" --> Port
+    Port --> Files
+    Browser -- "WS / WSS 诊断连接" --> Port
+    Port --> Echo
+    LegacyClient -- "明文 WebSocket 升级握手" --> Port
+    Port --> TCI
 ```
 
-- **HTTP 1.1 静态文件分发**：当浏览器发送标准 HTTP GET 请求（如请求根路径 `/`）时，[`TCIServer.cs`](file:///d:/workspace/Thetis/Project%20Files/Source/Console/TCIServer.cs) 拦截并直接读取程序本地 `web/` 目录中的 `totw.html` 及相关资产，极速返回静态网页。
-- **WebSocket 协议升级**：当网页加载完成并建立 `ws://` 握手时，服务器平滑转入 TCI v2.0 双全工模式，传输高频 IQ 数据、浮点音频流与频率/模式控制指令。
-- **标准安全上下文 (Secure Context)**：由于页面直接托管在 `http://localhost:50001/`，浏览器天然将其识别为安全源（Trustworthy Origin），因此能直接授权使用麦克风（Web Audio API `getUserMedia`），使得浏览器直接在线发射 (TX) 成为可能。
+- **静态资源安全分发**：[CodeHost.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Hosting/CodeHost.cs) 通过严格的资源清单校验、防路径穿越检查与流式传输提供资源，请求不会创建电台 TCI 客户端；
+- **独立诊断通道**：前端持有 `/code/diagnostics` 专用通道，用于心跳探测与文本指令回显；
+- **传统 TCI 兼容**：保留对标准外部 TCI 客户端（如 Log4OM、SDR-Control）的透明接入支持。
 
 ---
 
-## WebUI 常用快捷键
+## WebUI 常用操作与快捷键
 
-| 快捷键 | 功能操作 |
+| 快捷键 / 操作 | 功能描述 |
 | :--- | :--- |
-| <kbd>Space</kbd> (空格键) | **PTT 发射** (按住发射 / 点击切换) |
-| <kbd>↑</kbd> / <kbd>↓</kbd> | VFO 频率步进增加 / 减少 |
-| <kbd>Ctrl</kbd> + <kbd>↑</kbd> / <kbd>↓</kbd> | VFO 大步进调整 (×10) |
-| <kbd>Ctrl</kbd> + 滚轮 | 频谱窗口缩放 (Zoom In / Out) |
-| 双击频谱区 | 重置频谱缩放到默认全景视图 |
-| <kbd>M</kbd> | 将当前频率保存至记忆信道 (Memory) |
-| <kbd>F1</kbd> ~ <kbd>F4</kbd> | 快速调谐至记忆信道 1~4 |
-| <kbd>D</kbd> | 开关数字通信模式标记 (FT8 / FT4 / WSPR / PSK) |
-| <kbd>X</kbd> | 开关 DX Cluster 实时电报台呼叫点图层 |
-| <kbd>P</kbd> | 开关频谱峰值保持 (Peak Hold) |
-| <kbd>?</kbd> | 打开/关闭网页快捷键帮助窗口 |
+| <kbd>F1</kbd> | 打开 Code OSS 命令面板 |
+| <kbd>Tab</kbd> / <kbd>Shift</kbd> + <kbd>Tab</kbd> | 在可用界面控件间切换键盘焦点 |
+| <kbd>Enter</kbd> / <kbd>Space</kbd> | 激活当前聚焦的控件按钮 |
+| 命令面板：`Thetis: Open Console` | 重新打开或聚焦 Console 核心电台面板 |
+| 命令面板：`Thetis: Restore Default Layout` | 恢复 Code OSS 默认电台布局 |
+| 视图右键菜单 | 隐藏、停靠或分屏显示各个独立电台仪表板块 |
 
 ---
 
 ## Git Submodule 子模块管理
 
-WebUI 源码作为 Git Submodule 挂载在 [submodules/thetis-on-the-web](file:///d:/workspace/Thetis/submodules/thetis-on-the-web)。
+本项目涉及以下两个子模块，其职责与状态划分如下：
 
-若需要同步上游 WebUI 最新更新：
+1. **`submodules/vscode` (核心活跃子模块)**：
+   - **远程源**：镜像 Fork 至 [https://github.com/baiyunquan/vscode.git](https://github.com/baiyunquan/vscode.git)；
+   - **固定分支**：`thetis-pinned`（固定提交 `fdefc478b9148c1a47f913b3ec618a1226d9f600`，对应 Code OSS 1.146.0）；
+   - **功用**：提供纯净的 Web 工作台基础底座，父仓库通过独立前端代码对其进行扩展与宿主定制。
+2. **`submodules/thetis-on-the-web` (Legacy 归档子模块)**：
+   - **状态**：**Legacy / 历史参考**；
+   - **功用**：保留早期 TOTW 单文件 Vanilla JS、Canvas 2D 瀑布流与 Web Audio 实现作为技术对比参考，不再参与任何部署。
+
+更新或初始化子模块：
 ```powershell
-# 同步并拉取最新子模块提交
-git submodule update --remote --merge submodules/thetis-on-the-web
-
-# 重新运行构建脚本以将新资源部署到 bin/web/
-.\build.ps1 -All -Config Release
+# 同步初始化 Code OSS 活跃子模块
+git submodule update --init --recursive submodules/vscode
 ```
 
 ---
@@ -295,21 +346,15 @@ git submodule update --remote --merge submodules/thetis-on-the-web
 - **解决**：在终端执行 `Stop-Process -Name Thetis -Force`，或直接再次运行 `.\build.ps1 -All -Config Release`（脚本内部会自动清理残留进程）。
 
 ### Q2: 浏览器打开 `http://localhost:50001/` 提示无法连接
-- **原因**：Thetis 启动时未启用 TCI 服务器。
-- **解决**：
-  1. 使用 `Thetis.exe -web` 参数启动；
-  2. 或者在 Thetis 桌面 GUI 中打开 `Setup` -> `TCI` -> 勾选 `Enable TCI Server`。
+- **解决**：确认使用 `-code-demo` 或 `-web` 参数启动了 Thetis，并确认 50001 端口未被其他程序占用；可访问 [http://localhost:50001/code/health](http://localhost:50001/code/health) 查看健康检查状态。
 
-### Q3: WebUI 无法使用麦克风进行 TX 发射
-- **原因**：部分现代浏览器（如 Chrome）对非 `localhost` 且非 `https://` 的远程内网 IP 会限制麦克风访问。
-- **解决**：
-  - 本机访问使用 `http://localhost:50001/` 即可正常使用麦克风；
-  - 局域网跨设备访问时，可在 Chrome 打开 `chrome://flags/#unsafely-treat-insecure-origin-as-secure`，添加你的内网地址（如 `http://192.168.1.100:50001`）为安全源。
+### Q3: 为什么 Stage 1 中 Power、MOX、Tune、PTT 等发射按键处于不可用状态？
+- **原因**：当前处于 Code OSS UI 重构路线图的 **Stage 1 (Foundation)** 阶段，重点保证工作台架构、宿主通信、多引擎兼容与布局持久化；电台真实收发、音频流转与发射控制接入规划在 Stage 2 及后续阶段中逐步实现。
 
 ---
 
 ## 许可证与鸣谢
 
-- 本项目基于 OpenHPSDR / [ramdor/Thetis](https://github.com/ramdor/Thetis) 与 [thetis-on-the-web](https://github.com/baiyunquan/thetis-on-the-web)。
+- 本项目基于 OpenHPSDR / [ramdor/Thetis](https://github.com/ramdor/Thetis) 与历史 [thetis-on-the-web](https://github.com/baiyunquan/thetis-on-the-web) 演化重构。
 - 原生核心遵循开源许可证（详见 [LICENSE](file:///d:/workspace/Thetis/LICENSE) 与 [LICENSE-DUAL-LICENSING](file:///d:/workspace/Thetis/LICENSE-DUAL-LICENSING)）。
 - 衷心感谢 OpenHPSDR 社区、Richie (MW0LGE)、OE3IDE、n9bc 及所有无线电爱好者的杰出贡献！

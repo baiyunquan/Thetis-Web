@@ -2,14 +2,22 @@
 
 本文档对 Thetis-Web 项目的代码组织结构、核心大模块划分、各模块所依赖的系统 API 与底层库接口，以及端到端数据流与控制流进行深度技术剖析。
 
+> [!IMPORTANT]
+> **架构基准演进声明：旧版 WebUI 已正式归档为 Legacy 仅作参考**
+> 
+> 当前浏览器端运行时**唯一正式部署**的架构为 **Thetis Code OSS Foundation (Stage 1)**：资源位于 [Project Files/bin/x64/Release/web/code/](file:///d:/workspace/Thetis/Project%20Files/bin/x64/Release/web/code/)，根入口 `/` 自动重定向至 `/code/`，由 [CodeHost.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Hosting/CodeHost.cs) 与 [TCIServer.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/TCIServer.cs) 在单端口 50001 提供 HTTP/WebSocket 多路复用服务。
+> 
+> 本文档中所有关于早期子模块 [thetis-on-the-web](file:///d:/workspace/Thetis/submodules/thetis-on-the-web/) (TOTW / `totw.html`) 的描述均已正式进入 **Legacy 状态**，仅作为早期原型设计与历史算法对照参考，**不再参与任何构建、测试与运行时部署**。
+
 ---
 
 ## 1. 总体架构拓扑 (System Topology)
 
-Thetis-Web 采用分层解耦的混合架构设计：
+Thetis-Web 采用分层解耦的现代化混合架构设计：
 - **底层原生层 (Native Core, C99 / C++17)**：负责纳秒级时间敏感的数字信号处理 (DSP)、无锁环形缓冲队列、超低延迟音频硬件驱动 (ASIO / PortAudio / WDM-KS / WASAPI) 以及高吞吐 UDP 网络通信 (OpenHPSDR 硬件交互)。
 - **托管控制层 (Managed Core, C# / .NET Framework 4.8 on Roslyn)**：负责 Windows Forms 桌面交互、DirectX 11 / Direct2D 硬件加速频谱瀑布流渲染、电台状态机维护、CAT 指令解析、MIDI 映射及单一端口网络多路复用。
-- **远程 Web 客户端层 (Embedded WebUI, Vanilla ES6 / HTML5 / Web Audio)**：作为 Git Submodule 嵌入项目，直接由托管层服务于单端口 (Port 50001)，在浏览器内实现零安装的高分辨率频谱显示与双向双工音频/麦克风串流。
+- **现代浏览器工作台层 (Code OSS Foundation, TypeScript / Web Standards)**：固定版本的上游 Code OSS 1.146.0 提供原生工作台，父仓库独立维护的 Thetis 扩展与嵌入宿主提供模块化电台视图、合成 Console 控制台、皮肤与 `/code/diagnostics` 专用通道。托管层通过单端口 50001 的 [CodeHost.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Hosting/CodeHost.cs) 统一托管。
+- **历史归档 WebUI (Legacy - Reference Only)**：早期 [thetis-on-the-web](file:///d:/workspace/Thetis/submodules/thetis-on-the-web/) 作为历史源码保留，不部署至生产运行时。
 
 ```mermaid
 flowchart TD
@@ -31,14 +39,19 @@ flowchart TD
         Console["Thetis.exe (GUI 状态机 & 控制中心)"]
         RenderEng["SharpDX (Direct3D 11 / Direct2D) & SkiaSharp"]
         TCIServer["TCIServer (Port 50001 单端口多路复用服务)"]
+        CodeHost["CodeHost (web/code/ 静态安全托管 & /code/diagnostics)"]
         CATSub["CAT / TCP 远程指令引擎 (TS-2000 仿真)"]
         M2C["Midi2Cat & RawInput 外设处理组件"]
     end
 
-    subgraph WebClient ["嵌入式 WebUI 客户端 (submodules/thetis-on-the-web)"]
-        TOTW["totw.html (浏览器前端)"]
-        Canvas2D["Canvas 2D 硬件加速频谱 & 瀑布流 (4096-pt FFT)"]
-        WebAudio["Web Audio API (扬声器 RX 播放 & 麦克风 TX 采集)"]
+    subgraph WebClient ["现代浏览器工作台 (Code OSS Foundation)"]
+        CodeOSS["Code OSS 1.146.0 工作台 (web/code/)"]
+        Extension["Thetis 扩展 (Console / VFO / Meters / Bands / Filters)"]
+        DiagChannel["/code/diagnostics 专用通道"]
+    end
+
+    subgraph LegacyWebClient ["历史归档客户端 (Legacy - 仅作架构参考，未部署)"]
+        TOTW["thetis-on-the-web (totw.html 早期原型)"]
     end
 
     RadioHW <-->|"UDP 原始以太网帧 (Protocol 1 & 2)"| CM
@@ -55,10 +68,11 @@ flowchart TD
     HIDHW --> M2C --> Console
 
     Console <--> TCIServer
-    TCIServer <-->|"HTTP GET 静态资源分发"| TOTW
-    TCIServer <-->|"WebSocket RFC 6455 (TCI v2.0 全双工)"| TOTW
-    TOTW --> Canvas2D
-    TOTW <--> WebAudio
+    TCIServer <--> CodeHost
+    CodeHost <-->|"HTTP / HTTPS 静态资源分发 (清单校验)"| CodeOSS
+    CodeOSS --> Extension
+    Extension <-->|"WS / WSS 诊断连接"| CodeHost
+    TCIServer <-->|"WebSocket RFC 6455 (TCI v2.0 兼容透传)"| ExternalTCI["外部 TCI 客户端"]
 ```
 
 ---
@@ -175,43 +189,63 @@ flowchart TD
 
 ---
 
-### 2.5 单端口 Web 服务与协议多路复用器 (`TCIServer.cs`)
+### 2.5 单端口 Web 服务与协议多路复用器 (`TCIServer.cs` 与 `CodeHost.cs`)
 
-- **源码路径**：[Project Files/Source/Console/TCIServer.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/TCIServer.cs)
-- **开发语言**：C#
+- **源码路径**：[Project Files/Source/Console/TCIServer.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/TCIServer.cs)、[Project Files/Source/Console/Hosting/CodeHost.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Hosting/CodeHost.cs)
+- **开发语言**：C# (.NET Framework 4.8 / Roslyn)
 - **模块职责**：
-  解决传统 SDR 方案需要双端口（一个跑 Web、一个跑通信）带来的部署混乱。通过端口 50001 的流量特征，在应用层实现 HTTP 静态文件服务与 RFC 6455 WebSocket 协议升级的平滑分流。
+  解决传统 SDR 方案需要双端口（一个跑 Web 页面、一个跑网络控制）带来的部署混乱。通过端口 50001 的流量特征识别与请求路径路由，在单端口内原生实现 HTTP/HTTPS 静态资源安全分流、RFC 6455 WebSocket 协议升级、`/code/diagnostics` 专用通道及传统 TCI v2.0 电台数据透传。
 - **运行机制**：
-  - **HTTP/1.1 静态资源分发器**：
-    监听客户端 TCP 连接后读取请求行。若为标准 `GET /` 或静态文件请求，则从运行目录的 `web/` 读取并返回 `totw.html`、CSS、JS 及图像资源，带 Content-Type MIME 自动推断与 keep-alive 支持；
-  - **WebSocket 协议升级器**：
-    若检测到 `Upgrade: websocket` 报头，则计算 SHA-1 握手秘钥并返回 101 Switching Protocols 响应，转入全双工二进制协议模式；
-  - **TCI v2.0 协议处理器**：
-    双向编码/解码电台控制文本指令（频率、模式、驱动增益、静噪、滤波器等），并将原生层传来的 Float32 格式 RX IQ 与音频数据打包成二进制帧推送给 Web 客户端，同时接收来自浏览器的麦克风 TX PCM 样本。
+  - **静态资源安全分发 ([CodeHost.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Hosting/CodeHost.cs))**：
+    监听客户端 TCP 连接后读取 HTTP 请求行。标准 `GET /code/*` 请求从运行目录的 `web/code/` 读取并返回经过资产清单校验的 Code OSS 静态文件与 Thetis 扩展包。内置防路径穿越、严格 MIME 类型映射及大文件流式传输，且根路径 `/` 自动重定向至 `/code/`；
+  - **专用诊断 WebSocket (/code/diagnostics)**：
+    前端扩展持有独立诊断连接，直接与 C# 宿主进行带序列号的心跳和非电台诊断回显交互，无需创建电台客户端；
+  - **TCI v2.0 协议全双工升级器 ([TCIServer.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/TCIServer.cs))**：
+    若检测到外部 TCI 客户端的 `Upgrade: websocket` 握手请求，则进行 SHA-1 握手秘钥计算并返回 101 Switching Protocols 响应，转入全双工二进制协议模式，支持与 Log4OM、WSJT-X 等外部软件的高速通信。
 - **调用的系统与库接口**：
   - `System.Net.Sockets.TcpListener` / `TcpClient` / `NetworkStream`；
   - `System.Security.Cryptography.SHA1`。
 
 ---
 
-### 2.6 嵌入式 WebUI 客户端 (`thetis-on-the-web` / TOTW)
+### 2.6 [Legacy / 历史参考] 早期嵌入式 WebUI 客户端 (`thetis-on-the-web` / TOTW)
+
+> [!NOTE]
+> **本模块已正式进入 Legacy 历史归档状态**。
+> 其源码保留在 [submodules/thetis-on-the-web/](file:///d:/workspace/Thetis/submodules/thetis-on-the-web/)，仅作为早期单文件 Web 前端原型、Canvas 2D 瀑布流绘制与 Web Audio API 音频实验的算法参考。
+> 当前生产构建流水线与发布包**不再编译或部署该模块**。
 
 - **源码路径**：[submodules/thetis-on-the-web/](file:///d:/workspace/Thetis/submodules/thetis-on-the-web/)
 - **开发语言**：Vanilla ES6 JavaScript, HTML5, CSS3 (零第三方 npm 构建依赖)
-- **模块职责**：
-  提供现代化、全响应式的浏览器远程操作控制台，让用户在任意 PC、平板或手机浏览器中即可操作 Thetis。
-- **核心前端架构**：
-  - **Canvas 2D 硬件加速频谱瀑布流**：
-    前端在 Web Worker / 主线程中接收 Float32 格式的时域 IQ 样本，执行客户端 4096 点 FFT 计算与 Blackman-Harris 加窗运算，以 60 FPS 在 HTML5 Canvas 上绘制高清晰度频谱与多色彩瀑布图；
-  - **Web Audio API 真实音频流转**：
+- **历史前端架构**：
+  - **Canvas 2D 硬件加速频谱瀑布流**：前端在 Web Worker / 主线程中接收 Float32 格式的时域 IQ 样本，执行客户端 4096 点 FFT 计算与 Blackman-Harris 加窗运算，以 60 FPS 在 HTML5 Canvas 上绘制高清晰度频谱与多色彩瀑布图；
+  - **Web Audio API 实验性音频流转**：
     - 接收方向：利用 `AudioContext` 与音频工作流缓冲区解码接收到的 TCI 音频帧，驱动设备扬声器低延迟播放；
-    - 发射方向：调用 `navigator.mediaDevices.getUserMedia` 获取浏览器麦克风输入，转换并重采样为 48kHz Float32 PCM，封装入 TCI 二进制数据帧实时送入 Thetis 进行射频调制；
-  - **DX Cluster 动态图层**：
-    接入 Spothole API，将全球电台呼叫点 (Spots) 实时叠加显示于频谱刻度尺上方，支持一键调谐。
+    - 发射方向：调用 `navigator.mediaDevices.getUserMedia` 获取浏览器麦克风输入，转换并重采样为 48kHz Float32 PCM，封装入 TCI 二进制数据帧送入 Thetis 进行射频调制；
+  - **DX Cluster 动态图层**：接入 Spothole API，将全球电台呼叫点 (Spots) 实时叠加显示于频谱刻度尺上方。
 
 ---
 
-### 2.7 扩展输入支持模块 (`Midi2Cat` 与 `RawInput`)
+### 2.7 现代 Code OSS 浏览器工作台 (Thetis Code OSS Foundation & Extension)
+
+- **源码路径**：[ui/](file:///d:/workspace/Thetis/ui/)、[submodules/vscode/](file:///d:/workspace/Thetis/submodules/vscode/) (镜像 Fork 至 [https://github.com/baiyunquan/vscode.git](https://github.com/baiyunquan/vscode.git)，分支 `thetis-pinned`)
+- **运行时部署目录**：[Project Files/bin/x64/Release/web/code/](file:///d:/workspace/Thetis/Project%20Files/bin/x64/Release/web/code/)
+- **开发语言**：TypeScript, CSS / Less, HTML
+- **模块架构与职责**：
+  1. **Code OSS 1.146.0 基础底座**：
+     基于经过资格验证的上游固定版本构建，提供原生的工作区容器、布局管理器、侧边栏 (Activity Bar)、可折叠视图树 (TreeView)、Webview 视图容器 (WebviewView)、标签页拆分与 IndexedDB 布局持久化存储机制；
+  2. **Thetis 宿主嵌入层 ([ui/code-oss-host/](file:///d:/workspace/Thetis/ui/code-oss-host/))**：
+     父仓库自主拥有的嵌入引导程序，负责装配工作台启动参数、挂载 Thetis 专用扩展、适配安全上下文与处理服务工作线程 (Service Worker) 控制生命周期；
+  3. **Thetis 核心扩展 ([ui/thetis-extension/](file:///d:/workspace/Thetis/ui/thetis-extension/))**：
+     - 提供 Operate、Receiver Controls、Meters、Bands、Modes、Filters、Memories、Audio、RF、Display & Skins、Setup 等独立电台面板；
+     - 实现合成 Console 主电台编辑器视窗，支持 Classic 与 Midnight 两套无线电皮肤无缝切换；
+     - 维护与后端 [CodeHost.cs](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Hosting/CodeHost.cs) 的 `/code/diagnostics` 专用通信通道；
+  4. **全自动资产安全清单**：
+     由 [build.mjs](file:///d:/workspace/Thetis/ui/build.mjs) 在打包阶段静态生成 `web/code/asset-manifest.json`，确保运行时仅向浏览器分发经由数字指纹核验的安全静态资产。
+
+---
+
+### 2.8 扩展输入支持模块 (`Midi2Cat` 与 `RawInput`)
 
 #### `Midi2Cat`
 - **源码路径**：[Project Files/Source/Midi2Cat/](file:///d:/workspace/Thetis/Project%20Files/Source/Midi2Cat/)
@@ -258,9 +292,11 @@ flowchart TD
 | | | **FTDI 硬件** | `FTDI2XX.dll` | 物理 USB-串口/FIFO 控制器直连通信 |
 | **Web 服务** | `TCIServer.cs` | **.NET Sockets** | `System.Net.Sockets.TcpListener` | 50001 端口单端口 HTTP/WebSocket 多路复用 |
 | | | **.NET 加密库** | `System.Security.Cryptography.SHA1` | RFC 6455 Sec-WebSocket-Accept 握手校验 |
-| **网页前端** | `thetis-on-the-web` | **HTML5 Canvas 2D** | `CanvasRenderingContext2D` | 客户端 4096 点 FFT 结果与瀑布流 60 FPS 绘制 |
-| | | **Web Audio API** | `AudioContext`, `getUserMedia` | 浏览器麦克风采集 (TX) 与扬声器解码播放 (RX) |
-| | | **WebSocket API** | `window.WebSocket` | 与 Port 50001 建立低延迟 TCI 全双工数据管道 |
+| | `CodeHost.cs` | **.NET HTTP/TLS** | `HttpListener`, `SslStream` | `web/code/` 静态安全托管、资产清单校验与 `/code/diagnostics` 诊断通道 |
+| **现代网页前端** | `ui/thetis-extension` | **Code OSS 1.146.0** | `vscode.window`, `WebviewViewProvider` | 现代化原生电台工作台、模块化视图与 Classic/Midnight 皮肤 |
+| | `ui/code-oss-host` | **Web Standards** | `ServiceWorker`, `IndexedDB` | 前端宿主引导、跨引擎控制器适配与布局状态持久化 |
+| **[Legacy/参考]** | `thetis-on-the-web` | **HTML5 Canvas 2D** | `CanvasRenderingContext2D` | 早期单文件原型 4096 点 FFT 瀑布流（源码保留仅作参考） |
+| | | **Web Audio API** | `AudioContext`, `getUserMedia` | 早期浏览器麦克风采集与音频播放原型（已停止部署） |
 | **外设接口** | `RawInput.dll` | **Win32 Raw Input** (`user32.dll`) | `RegisterRawInputDevices`, `GetRawInputData` | 获取调谐飞轮与外部无焦点输入设备的原始位移 |
 
 ---
@@ -285,13 +321,15 @@ flowchart TD
        │
        ├──► (B) 通过 [analyzer.c] 计算 FFT 幅度 ──► [Thetis.exe : SharpDX GPU] ──► [桌面 Panadapter 瀑布流]
        │
-       └──► (C) 通过 [TCIServer.cs] WebSocket ──► [totw.html : Web Audio API & Canvas] ──► [浏览器扬声器与 Web 瀑布流]
+       ├──► (C) [现代工作台] 通过 [CodeHost.cs] (:50001/code/) ──► [Code OSS Thetis 扩展工作台] (诊断通道与合成面板)
+       │
+       └──► (D) [Legacy 历史原型参考] 早期通过 [TCIServer.cs] WebSocket ──► [totw.html : Web Audio API & Canvas] (已停止部署)
 ```
 
 ### 4.2 发射 (TX) 数据流全链路
 ```text
-[麦克风输入] ──► 本地麦克风 (PA19 / ASIO) 或 远程浏览器麦克风 (Web Audio getUserMedia)
-       │
+[麦克风输入] ──► 本地麦克风 (PA19 / ASIO) [现代 Code OSS 浏览器真实音频流转规划在后续阶段接入]
+       │         (注：历史早期原型中的 totw.html Web Audio 麦克风流转仅保留源码作参考)
        ▼
 [Thetis.exe / TCIServer.cs] ──► (抽取并归一化为 48kHz PCM 样本)
        │
@@ -318,20 +356,34 @@ flowchart TD
 
 ```text
 Thetis/
+├── .github/
+│   └── workflows/
+│       └── windows-build.yml                # GitHub Actions 云端 CI 构建流水线 (单 Job 三阶段)
 ├── .vscode/                                 # VS Code 工程配置文件
 │   ├── tasks.json                           # 声明式构建任务 (Ctrl+Shift+B)
-│   ├── launch.json                          # 调试配置 (C# / C++ 混合断点)
+│   ├── launch.json                          # 调试配置 (C# / C++ 混合断点与 Demo 启动)
 │   ├── settings.json                        # 工作区规则与文件排除
 │   └── extensions.json                      # 推荐开发插件
 ├── cmake/                                   # CMake 辅助构建模块
 │   └── PA19.cmake                           # PortAudio 19 构建脚本
 ├── CMakeLists.txt                           # 原生根构建定义 (MSVC + Ninja)
 ├── CMakePresets.json                        # 标准 CMake 预设配置
+├── Directory.Build.props                    # Roslyn 编译器常驻编译服务优化配置
 ├── build.ps1                                # PowerShell 一键自动化构建脚本
 ├── build.bat                                # CMD 批处理一键构建脚本
 ├── AGENTS.md                                # AI 编程助手架构契约与行为准则
 ├── STRUCTURE.md                             # 项目架构与大模块技术规范 (本文档)
 ├── ReadMe.md                                # 项目用户与开发者指南
+├── BUILD.md                                 # 编译构建、测试与多启动模式指南
+│
+├── ui/                                      # [现代工作台] Thetis Code OSS 前端工程
+│   ├── code-oss-host/                       # 嵌入宿主引导代码与服务工作线程适配器
+│   ├── thetis-extension/                    # Thetis 专用电台工作台扩展 (Console / Panels)
+│   ├── baseline/                            # 布局状态机与证书凭据测试基准
+│   ├── scripts/                             # 测试、驱动与资格检查自动化脚本
+│   ├── build-code-web.ps1                   # 上游 Code OSS 浏览器包预编译与缓存脚本
+│   ├── build-ui.ps1                         # Thetis 宿主与扩展构建打包脚本
+│   └── stage-code-web.ps1                   # 部署资源至运行目录脚本
 │
 ├── Project Files/
 │   ├── lib/                                 # 第三方预编译依赖库
@@ -349,6 +401,7 @@ Thetis/
 │   │   │   ├── Andromeda/                   # 物理专用控制台驱动
 │   │   │   ├── CAT/                         # TS-2000 CAT 指令仿真与 TCP 服务器
 │   │   │   ├── CW/                          # CW 自动键与时序调度
+│   │   │   ├── Hosting/                     # CodeHost 单端口静态资产与诊断通信托管
 │   │   │   ├── HPSDR/                       # OpenHPSDR 硬件通信与设备探测
 │   │   │   ├── Memory/                      # 频段记忆与 DX 呼叫点存储
 │   │   │   ├── TCIServer.cs                 # 单端口 50001 HTTP/WebSocket 多路复用服务
@@ -365,13 +418,15 @@ Thetis/
 │       ├── PA19.dll                         # 原生 PortAudio 驱动库
 │       ├── libfftw3-3.dll                   # FFT 依赖库
 │       ├── rnnoise.dll                      # 神经网络降噪依赖库
-│       ├── web/                             # WebUI 网页资源托管目录
+│       ├── web/                             # Web 资源托管根目录
+│       │   └── code/                        # Code OSS 运行时、宿主与扩展资产清单
 │       └── Skins/                           # 皮肤外观配置目录
 │
 └── submodules/
-    └── thetis-on-the-web/                   # [模块 6] WebUI 独立子模块 (Git Submodule)
-        ├── totw.html                        # 独立单文件 WebUI 客户端
-        └── website/                         # 拆分版本源码 (CSS/JS)
+    ├── vscode/                              # [活跃子模块] Code OSS 1.146.0 (Fork: baiyunquan/vscode)
+    └── thetis-on-the-web/                   # [Legacy / 历史参考] 早期原型源码 (未部署)
+        ├── totw.html                        # 历史单文件 WebUI 客户端原型
+        └── website/                         # 历史拆分源码 (CSS/JS)
 ```
 
 

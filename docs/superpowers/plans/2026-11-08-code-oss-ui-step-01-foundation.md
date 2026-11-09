@@ -1,6 +1,6 @@
 # Step 01: Thetis Code OSS Foundation
 
-Status, 2026-11-09: implementation is present; packaged local qualification is being completed. Trusted cross-machine acceptance on `192.168.0.0/24` remains unqualified. This is Stage 1 of the [ten-stage roadmap](D:/workspace/Thetis/docs/superpowers/plans/2026-11-08-code-oss-ui-reconstruction.md), with qualification included here.
+Status, 2026-11-09: implementation is present; 42 packaged browser tests, 46 unit tests, strict TypeScript and the Release pipeline pass. Trusted cross-machine acceptance on `192.168.0.0/24` and complete normal WinForms/legacy TCI acceptance remain unqualified. This is Stage 1 of the [ten-stage roadmap](D:/workspace/Thetis/docs/superpowers/plans/2026-11-08-code-oss-ui-reconstruction.md), with qualification included here.
 
 ## Scope and architecture
 
@@ -66,9 +66,11 @@ Defaults: `https://thetis.home.arpa:50001/code/`, `https://<hash>.thetis.home.ar
 - [x] Preserve stable container/view identities. Seed Power/Gain and four right-side controls expanded, Device collapsed, RF extras hidden and bottom Panel closed, without forcing defaults on reload.
 - [x] Register Console serialization and first-use-only opening. A deliberately closed Console remains closed; the open command restores access.
 - [x] Implement default restoration through native actions, preserving synthetic state and native storage ownership. Document exact-width/collapse and single-view-header limits.
-- [ ] Complete the recorded browser matrix for move/hide/collapse/reload/restoration. Tests observe actual native IndexedDB persistence before raw reload rather than adding arbitrary startup delays or writing private storage keys.
+- [x] Complete the recorded Edge/Firefox/WebKit matrix for move/hide/collapse/reload/restoration. Tests observe actual native IndexedDB persistence before raw reload rather than adding arbitrary startup delays or writing private storage keys.
 
 Code periodically flushes browser state. Abrupt reload before that flush may lose recent native layout/editor changes; its ordered Reload Window command flushes before navigation. The native context menu also has an intentional 100 ms mouse-up guard, verified in current Code source; qualification uses ordinary keyboard menu actions.
+
+Built Code can select Explorer after a raw browser cold start; selecting Operate reveals saved view state. WebKit can leave the workbench blurred after closing an isolated editor; click the empty editor and allow its focused storage collection, or use Reload Window. These native limits are recorded in the qualification report. The guarded parent-owned controller adapter fixes Firefox blank remounts without changing tracked Code source.
 
 ## 1.F: Synthetic Console and shared state
 
@@ -76,14 +78,14 @@ Code periodically flushes browser state. Abrupt reload before that flush may los
 - [x] Keep RX2 target selection separate from enabling its plot. Render deterministic spectrum/waterfall fixtures with pause/resume and mode-family lower regions.
 - [x] Restore latest snapshots to recreated views; retain local presentation state and separate host connectivity from radio readiness.
 - [x] Gate controls on a ready/snapshot handshake. Trace pointer delivery, panel actions and acknowledgements; fix queued cold diagnostic requests and idle diagnostic lifetime.
-- [ ] Complete and retain repeated physical mouse/keyboard/touch and first-input trace evidence. Earlier Hello World misses are not retroactively attributed to a cause without evidence.
+- [x] Retain physical mouse/keyboard/touch and first-input trace evidence, including four cold contexts per browser engine. Fix focus reconciliation replacing button text during a pending WebKit click. Earlier Hello World misses are not retroactively attributed to a cause without evidence.
 
 ## 1.G: Skins and responsive presentation
 
 - [x] Supply Classic and Midnight radio skins with semantic surface/text/selection/focus/disabled/fault/stale/instrument tokens and stable component/ARIA/state identities.
 - [x] Keep panel tokens independent of the Code theme, persist skin selection and provide CSS instrument/control fallback without optional image dependencies.
 - [x] Supply Expanded, Compact, Touch and automatic density; reflow narrow VFO/deck content without automatically relocating native views.
-- [ ] Complete desktop geometry, browser scaling, portrait touch, keyboard focus and independent-theme evidence. Record browser emulation separately from physical Windows display scaling.
+- [x] Complete desktop geometry, browser scaling, portrait touch, keyboard focus and independent-theme evidence. Record browser emulation separately from unqualified physical Windows scaling. Defer responsive layout writes outside ResizeObserver delivery; resize errors remain unexpected failures.
 
 Legacy XML/PNG import, eight-state imagery and skin install/remove workflows remain Stage 8.
 
@@ -93,7 +95,9 @@ Legacy XML/PNG import, eight-state imagery and skin install/remove workflows rem
 - [x] Retain screenshots, browser/network logs, build identities, first-input traces and connection/startup measurements beneath the generated evidence directory.
 - [x] Keep known source-specific upstream errors visible in raw logs; reject other page/resource failures and require all initial visible control views to become ready.
 - [x] Automate clean/upgrade staging, framing/failure/lifecycle checks and zero-test-selector rejection.
-- [ ] Finish the local packaged browser matrix and copied-profile compatibility checks, then publish measured results in the qualification record.
+- [x] Finish the local packaged browser matrix (42/42) and headed Edge smoke test, then publish measured results and copied-profile attempt limits in the qualification record.
+- [x] Reproduce and fix the WinForms resource-reader binding mismatch; add an isolated deployed-resource probe without constructing Forms or radio services.
+- [ ] Complete visible normal WinForms startup and an actual legacy TCI handshake/read query from a copied profile. Resource loading and native DLL presence alone do not qualify this compatibility dimension.
 - [ ] Add actual remote-machine acceptance before marking Stage 1 complete. Preserve open WinForms/radio/device evidence explicitly.
 
 Every completed operation receives its targeted checks, the required Release pipeline for code/configuration/assets, and a coherent Git commit.

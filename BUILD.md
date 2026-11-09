@@ -1,15 +1,16 @@
 # Thetis-Web Build Guide (BUILD.md)
 
-This document provides complete instructions for building, packaging, verifying, and launching **Thetis-Web** from the command line and Visual Studio Code on Windows x64.
+This document provides complete instructions for building, packaging, verifying, and launching **Thetis-Web** from the command line, Visual Studio Code, and GitHub Actions Cloud CI on Windows x64.
 
 ---
 
 ## 1. Overview & Build Architecture
 
 The repository is completely decoupled from Visual Studio solution files (`.sln` / `.vcxproj`). It uses a modern dual-toolchain build system:
-- **Native C/C++ Core (`PA19.dll`, `wdsp.dll`, `cmASIO.dll`, `ChannelMaster.dll`)**: Defined via [CMakeLists.txt](file:///d:/workspace/Thetis/CMakeLists.txt) and compiled using Microsoft Visual C++ (`cl.exe`) with the Ninja build generator.
-- **Managed C# Application (`Thetis.exe`, `Midi2Cat.dll`, `RawInput.dll`)**: Defined via [`Thetis.csproj`](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Thetis.csproj) and built via modern .NET SDK CLI (`dotnet build`).
+- **Native C/C++ Core ([`PA19.dll`](file:///d:/workspace/Thetis/cmake/PA19.cmake), [`wdsp.dll`](file:///d:/workspace/Thetis/Project%20Files/Source/wdsp/), [`cmASIO.dll`](file:///d:/workspace/Thetis/Project%20Files/Source/cmASIO/), [`ChannelMaster.dll`](file:///d:/workspace/Thetis/Project%20Files/Source/ChannelMaster/))**: Defined via [CMakeLists.txt](file:///d:/workspace/Thetis/CMakeLists.txt) and compiled using Microsoft Visual C++ (`cl.exe`) with the Ninja build generator.
+- **Managed C# Application ([`Thetis.exe`](file:///d:/workspace/Thetis/Project%20Files/Source/Console/), `Midi2Cat.dll`, `RawInput.dll`)**: Defined via [`Thetis.csproj`](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Thetis.csproj) and built via modern .NET SDK CLI (`dotnet build`) accelerated by the Roslyn resident compiler server.
 - **Code OSS Browser Workbench (`web/code/`)**: Built and packaged via [ui/build-code-web.ps1](file:///d:/workspace/Thetis/ui/build-code-web.ps1) and [ui/build-ui.ps1](file:///d:/workspace/Thetis/ui/build-ui.ps1), then staged alongside native DLLs.
+- **Legacy WebUI Status**: The earlier submodule [thetis-on-the-web](file:///d:/workspace/Thetis/submodules/thetis-on-the-web/) (TOTW / `totw.html`) has entered **Legacy status** and is retained strictly as source reference; it is neither compiled nor staged in active distributions.
 
 ---
 
@@ -24,8 +25,8 @@ Ensure the following tools are installed on your Windows 10/11 64-bit system:
 | **CMake** | >= 3.20 | Native build definition system |
 | **Ninja** | >= 1.10 (recommended) | Fast parallel build execution engine |
 | **.NET SDK** | 8.0 / 9.0 / 10.0 | Provides `dotnet build` with .NET Framework 4.8 targeting |
-| **Git** | Latest | Required for source control and Submodule synchronization |
-| **Node.js & pnpm** | Node 24.22.1 / pnpm 12.16.0 | Pinned tools for Code OSS Web UI (automatically managed by scripts) |
+| **Git & GitHub CLI** | Git latest / `gh` CLI | Required for source control, submodule management, and CI cache operations |
+| **Node.js & pnpm** | Node 24.22.1 / pnpm 12.16.0 | Pinned tools for Code OSS Web UI (automatically managed by build scripts) |
 
 ---
 
@@ -91,8 +92,8 @@ Pre-configured development tasks and launch profiles are available in `.vscode/`
 To build manually or integrate with CI/CD environments:
 
 ```powershell
-# Step 1: Synchronize Git submodules
-git submodule update --init --recursive
+# Step 1: Synchronize Git submodules (Code OSS submodule under baiyunquan/vscode)
+git submodule update --init --recursive submodules/vscode
 
 # Step 2: Restore C# NuGet dependencies
 nuget restore "Project Files/Source/Console/Thetis.csproj" -PackagesDirectory "Project Files/Source/packages"
@@ -103,7 +104,8 @@ cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=Release -DCMAKE_C_COMPILER=cl -DCMAKE
 # Step 4: Build native C/C++ targets (ChannelMaster, wdsp, cmASIO, PA19)
 cmake --build build --target native_core
 
-# Step 5: Build C# managed application via dotnet CLI
+# Step 5: Build C# managed application via dotnet CLI (leveraging Roslyn compiler server)
+$env:MSBUILDUSESERVER = "1"
 dotnet build "Project Files/Source/Console/Thetis.csproj" -c Release -p:Platform=x64
 
 # Step 6: Stage binaries and dependencies to execution folder
@@ -146,17 +148,47 @@ powershell -NoProfile -ExecutionPolicy Bypass -File tests/Thetis.Hosting.Tests/r
 
 ---
 
-## 8. Launching Thetis
+## 8. GitHub Actions Cloud CI Workflow
+
+The project includes an enterprise-grade cloud CI pipeline defined in [.github/workflows/windows-build.yml](file:///d:/workspace/Thetis/.github/workflows/windows-build.yml):
+
+### 8.1 Workflow Architecture
+
+The pipeline runs on `windows-latest` as a single consolidated job divided into three sequential phases:
+- **Phase 1: Environment Preparation & Cache Restoration**:
+  - Restores NuGet packages (`Project Files/Source/packages`).
+  - Restores pre-downloaded toolchains (`build/tools`).
+  - Restores frontend dependencies (`ui/node_modules` and local pnpm store).
+  - Restores Code OSS pre-built bundle (`submodules/vscode/out-vscode-web`, `build/code-cache.json`).
+  - Uses `actions/cache/restore@v4` strictly separated from save operations.
+- **Phase 2: Compilation, Staging & Multi-Level Verification**:
+  - Builds native C/C++ core with CMake and Ninja.
+  - Compiles managed C# with `dotnet build` using the resident Roslyn compiler server.
+  - Stages all runtime components to `Project Files/bin/x64/Release/`.
+  - Runs the full C# hosting integration test suite and frontend unit test suite.
+  - Uploads verified build artifacts (`Thetis-Release-x64`).
+- **Phase 3: Stale Cache Pruning & Cache Preservation**:
+  - Automatically queries and deletes outdated GitHub Actions cache keys via GitHub CLI (`gh cache delete`) using `GITHUB_TOKEN`.
+  - Saves fresh cache snapshots via `actions/cache/save@v4` only after all tests succeed.
+
+### 8.2 Triggering Policy
+
+- **Manual Trigger (`workflow_dispatch`)**: The primary mechanism for running CI on demand without consuming quotas on regular commits.
+- **Pull Request (`pull_request`)**: Automatically runs as a quality gate when opening or updating a PR against main development branches. Routine `push` events do not trigger CI.
+
+---
+
+## 9. Launching Thetis
 
 ### Mode A: Web Host Diagnostic (No Radio Required)
-Starts the embedded foundation host on port 50001 without initializing SDR hardware. Local HTTP/WS works immediately; LAN HTTPS/WSS requires the [DNS/certificate setup](D:/workspace/Thetis/docs/ui-parity/lan-setup.md):
+Starts the embedded foundation host on port 50001 without initializing SDR hardware:
 ```powershell
 & './Project Files/bin/x64/Release/Thetis.exe' -code-demo
 ```
 - **Web Interface**: [http://localhost:50001/](http://localhost:50001/) (automatically redirects to `/code/`)
 - **Health Check API**: [http://localhost:50001/code/health](http://localhost:50001/code/health)
 
-### Mode B: WinForms with embedded hosting
+### Mode B: WinForms with Embedded Hosting
 Starts the existing radio application and enables embedded hosting on port 50001:
 ```powershell
 & './Project Files/bin/x64/Release/Thetis.exe' -web
@@ -173,7 +205,7 @@ The Code extension remains synthetic in Stage 1, including when served by normal
 
 ---
 
-## 9. Troubleshooting
+## 10. Troubleshooting
 
 ### Q1: `Permission denied` when copying `PA19.dll` or `Thetis.exe`
 - **Cause**: A previous instance of `Thetis.exe` is still running in the background, locking native DLLs and the executable.
@@ -181,7 +213,7 @@ The Code extension remains synthetic in Stage 1, including when served by normal
 
 ### Q2: Missing submodules during build
 - **Cause**: Submodule repositories have not been cloned or updated.
-- **Fix**: Run `git submodule update --init --recursive`.
+- **Fix**: Run `git submodule update --init --recursive submodules/vscode`.
 
 ### Q3: Missing `cl.exe` or Visual Studio environment variables
 - **Cause**: Building from a command prompt without MSVC environment initialized.

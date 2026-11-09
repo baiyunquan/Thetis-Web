@@ -1,6 +1,6 @@
 # Thetis Code OSS UI: overall view and ten-step baseline
 
-Status, 2026-11-09: Stage 1 foundation implementation is present and undergoing packaged-runtime qualification. Trusted cross-machine LAN acceptance remains open. Stages 2-10 remain future implementation. There are **exactly ten separate implementation plans**; qualification belongs to every step.
+Status, 2026-11-09: Stage 1 foundation implementation passes 42 packaged browser tests, 46 unit tests, strict TypeScript and the required Release pipeline. Trusted cross-machine LAN and complete normal WinForms/legacy TCI acceptance remain open, so Stage 1 is not marked complete. Stages 2-10 remain future implementation. There are **exactly ten separate implementation plans**; qualification belongs to every step.
 
 The [Stage 1 record][step01], [runtime instructions](D:/workspace/Thetis/ui/README.md) and [qualification evidence](D:/workspace/Thetis/docs/ui-parity/qualification.md) distinguish implemented behavior, measured local results and unqualified deployment/hardware cases. The normal browser package loads the maintained Thetis extension. The old WebUI is removed from CMake deployment; the root entry opens Code. WinForms and legacy TCI remain.
 
