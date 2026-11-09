@@ -1,0 +1,125 @@
+name: Windows CI Build
+
+on:
+  push:
+    branches:
+      - main
+      - 'feat/**'
+  pull_request:
+    branches:
+      - main
+      - 'feat/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build Thetis (Windows x64)
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: powershell
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+          submodules: false
+
+      - name: Checkout submodules shallowly
+        run: |
+          git submodule update --init --recursive --depth 1
+
+      - name: Setup MSVC developer environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Setup .NET SDK
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: |
+            Project Files/Source/packages
+            ${{ env.LOCALAPPDATA }}/NuGet/Cache
+          key: ${{ runner.os }}-nuget-${{ hashFiles('Project Files/Source/Console/packages.config') }}
+          restore-keys: |
+            ${{ runner.os }}-nuget-
+
+      - name: Cache build tools
+        uses: actions/cache@v4
+        with:
+          path: build/tools
+          key: ${{ runner.os }}-build-tools-${{ hashFiles('submodules/vscode/.nvmrc', 'submodules/vscode/package.json') }}
+          restore-keys: |
+            ${{ runner.os }}-build-tools-
+
+      - name: Cache UI node modules
+        uses: actions/cache@v4
+        with:
+          path: |
+            ui/node_modules
+            build/ui-dependencies.sha256
+          key: ${{ runner.os }}-ui-node-modules-${{ hashFiles('ui/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-ui-node-modules-
+
+      - name: Cache pnpm store
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.LOCALAPPDATA }}/pnpm/store
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('ui/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+
+      - name: Cache Code OSS Web bundle
+        id: cache-code-oss-web
+        uses: actions/cache@v4
+        with:
+          path: |
+            submodules/vscode/out-vscode-web
+            build/code-cache.json
+          key: ${{ runner.os }}-vscode-web-fdefc478
+          restore-keys: |
+            ${{ runner.os }}-vscode-web-
+
+      - name: Seed Code OSS Web bundle from release if not cached
+        if: steps.cache-code-oss-web.outputs.cache-hit != 'true'
+        run: |
+          $expectedFile = "submodules/vscode/out-vscode-web/vs/workbench/workbench.web.main.internal.js"
+          if (-not (Test-Path $expectedFile)) {
+            Write-Host "[INFO] Restoring prebuilt Code OSS web bundle from release seed..." -ForegroundColor Cyan
+            $destZip = "build/vscode-web-bundle-fdefc478.zip"
+            if (-not (Test-Path "build")) { New-Item -ItemType Directory -Path "build" -Force | Out-Null }
+            Invoke-WebRequest -Uri "https://github.com/baiyunquan/Thetis-Web/releases/download/ci-assets-fdefc478/vscode-web-bundle-fdefc478.zip" -OutFile $destZip
+            Invoke-WebRequest -Uri "https://github.com/baiyunquan/Thetis-Web/releases/download/ci-assets-fdefc478/code-cache.json" -OutFile "build/code-cache.json"
+            Expand-Archive -LiteralPath $destZip -DestinationPath "submodules/vscode" -Force
+            Remove-Item -Force $destZip
+            Write-Host "[OK] Code OSS web bundle successfully restored." -ForegroundColor Green
+          }
+
+      - name: Build Thetis (All Targets, Release)
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File ./build.ps1 -All -Config Release
+
+      - name: Run Thetis.Hosting C# Tests
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File tests/Thetis.Hosting.Tests/run.ps1
+
+      - name: Run UI Vitest Unit Tests
+        run: |
+          & './build/tools/node-v24.22.1-win-x64/node.exe' ui/scripts/test.mjs unit
+
+      - name: Upload Thetis Build Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: Thetis-Release-x64
+          path: Project Files/bin/x64/Release
+          if-no-files-found: error
