@@ -1,14 +1,24 @@
 param([Parameter(Mandatory = $true)][string]$Destination)
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
-$binRoot = [IO.Path]::GetFullPath((Join-Path $repo 'Project Files/bin')) + [IO.Path]::DirectorySeparatorChar
 $target = [IO.Path]::GetFullPath($Destination)
-$relative = $target.Substring([Math]::Min($binRoot.Length, $target.Length))
-if (-not $target.StartsWith($binRoot, [StringComparison]::OrdinalIgnoreCase) -or $relative -notmatch '^(x64|x86)\\(Release|Debug)\\web\\code$') {
+# Accept the former .../web/code argument, but replace the entire generated web root.
+if ((Split-Path $target -Leaf) -eq 'code') { $target = Split-Path $target -Parent }
+$binRoot = [IO.Path]::GetFullPath((Join-Path $repo 'Project Files/bin')) + [IO.Path]::DirectorySeparatorChar
+$buildRoot = [IO.Path]::GetFullPath((Join-Path $repo 'build')) + [IO.Path]::DirectorySeparatorChar
+$runtime = $target.StartsWith($binRoot, [StringComparison]::OrdinalIgnoreCase) -and $target.Substring($binRoot.Length) -match '^(x64|x86)\\(Release|Debug)\\web$'
+$native = $target.StartsWith($buildRoot, [StringComparison]::OrdinalIgnoreCase) -and $target.Substring($buildRoot.Length) -match '^(?:[a-zA-Z0-9_-]+\\)*bin\\web$'
+if (-not ($runtime -or $native)) {
     throw "Refusing to replace an unexpected staging path: $target"
 }
+$cursor = $target
+while ($cursor.Length -ge $repo.Length) {
+    if ((Test-Path -LiteralPath $cursor) -and ((Get-Item -LiteralPath $cursor -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)) { throw "Refusing a reparse point in staging path: $cursor" }
+    $cursor = Split-Path $cursor -Parent
+}
+if (Get-Process Thetis -ErrorAction SilentlyContinue) { throw 'Stop Thetis before staging browser assets.' }
 $source = Join-Path $repo 'build/code-web'
-if (-not (Test-Path -LiteralPath (Join-Path $source 'index.html'))) { throw 'Build Code OSS web first.' }
+if (-not (Test-Path -LiteralPath (Join-Path $source 'asset-manifest.json'))) { throw 'Build the Thetis UI before staging.' }
 if (Test-Path -LiteralPath $target) { Remove-Item -LiteralPath $target -Recurse -Force }
-[IO.Directory]::CreateDirectory($target) | Out-Null
-Copy-Item -Path (Join-Path $source '*') -Destination $target -Recurse -Force
+[IO.Directory]::CreateDirectory((Join-Path $target 'code')) | Out-Null
+Copy-Item -Path (Join-Path $source '*') -Destination (Join-Path $target 'code') -Recurse -Force

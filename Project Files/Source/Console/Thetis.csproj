@@ -824,6 +824,10 @@
     <Compile Include="SpotManager2.cs" />
     <Compile Include="TCIServer.cs" />
     <Compile Include="EmbeddedWebContent.cs" />
+    <Compile Include="Hosting\HostingConfiguration.cs" />
+    <Compile Include="Hosting\HostHttp.cs" />
+    <Compile Include="Hosting\CodeHost.cs" />
+    <Compile Include="Hosting\DiagnosticWebSocket.cs" />
     <Compile Include="titlebar.cs" />
     <Compile Include="TuneStep.cs" />
     <Compile Include="ucOtherButtonsOptionsGrid.cs" />

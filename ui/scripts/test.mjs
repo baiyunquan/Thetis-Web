@@ -1,0 +1,12 @@
+import { spawnSync } from 'node:child_process';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { createRequire } from 'node:module';
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const require = createRequire(path.join(root, 'package.json'));
+const [kind, ...input] = process.argv.slice(2);
+const args = input.filter(item => item !== '--');
+const entry = kind === 'e2e' ? require.resolve('@playwright/test/cli') : path.join(path.dirname(require.resolve('vitest/package.json')), 'vitest.mjs');
+const result = spawnSync(process.execPath, [entry, kind === 'e2e' ? 'test' : 'run', ...args], { cwd: root, stdio: 'inherit' });
+if (result.error) throw result.error;
+process.exit(result.status ?? 1);

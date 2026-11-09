@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "target": "ES2024", "module": "ESNext", "moduleResolution": "Bundler",
+    "lib": ["ES2024", "DOM", "DOM.Iterable"], "strict": true,
+    "skipLibCheck": true, "noEmit": true, "allowImportingTsExtensions": true,
+    "resolveJsonModule": true, "types": ["node"],
+    "paths": { "vscode": ["../submodules/vscode/src/vscode-dts/vscode.d.ts"] }
+  },
+  "include": ["code-oss-host/src/**/*.ts", "thetis-extension/src/**/*.ts", "tests/**/*.ts", "*.config.ts"]
+}

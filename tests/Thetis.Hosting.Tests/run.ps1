@@ -1,0 +1,16 @@
+$ErrorActionPreference = 'Stop'
+$repo = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
+Get-Process Thetis -ErrorAction SilentlyContinue | Stop-Process -Force
+dotnet build (Join-Path $PSScriptRoot 'Thetis.Hosting.Tests.csproj') -c Release --nologo
+if ($LASTEXITCODE -ne 0) { throw 'Hosting harness build failed.' }
+# Isolated, untrusted leaf fixture: never placed in Root and always removed with its key.
+$certificate = New-SelfSignedCertificate -DnsName 'thetis-test.home.arpa','*.thetis-test.home.arpa' -CertStoreLocation 'Cert:\CurrentUser\My' -NotAfter (Get-Date).AddDays(1) -KeyAlgorithm RSA -KeyLength 2048 -HashAlgorithm SHA256 -FriendlyName 'Thetis hosting integration test fixture'
+$priorCertificate = $env:THETIS_HOST_TEST_CERT
+try {
+    $env:THETIS_HOST_TEST_CERT = $certificate.Thumbprint
+    & (Join-Path $PSScriptRoot 'bin/Release/net48/Thetis.Hosting.Tests.exe')
+    if ($LASTEXITCODE -ne 0) { throw 'Hosting harness failed.' }
+} finally {
+    $env:THETIS_HOST_TEST_CERT = $priorCertificate
+    Remove-Item -LiteralPath ('Cert:\CurrentUser\My\' + $certificate.Thumbprint) -DeleteKey
+}

@@ -1,0 +1,9 @@
+packages:
+  - thetis-extension
+nodeLinker: hoisted
+strictPeerDependencies: false
+strictDepBuilds: true
+allowBuilds:
+  esbuild: false
+skills:
+  dirs: []

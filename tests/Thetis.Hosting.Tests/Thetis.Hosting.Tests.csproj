@@ -1,0 +1,13 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType><TargetFramework>net48</TargetFramework>
+    <LangVersion>10.0</LangVersion><EnableDefaultCompileItems>false</EnableDefaultCompileItems>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="Program.cs" />
+    <Compile Include="../../Project Files/Source/Console/EmbeddedWebContent.cs" Link="EmbeddedWebContent.cs" />
+    <Compile Include="../../Project Files/Source/Console/Hosting/**/*.cs" Link="Hosting/%(Filename)%(Extension)" />
+    <Reference Include="Newtonsoft.Json"><HintPath>../../Project Files/Source/packages/Newtonsoft.Json.13.0.4/lib/net45/Newtonsoft.Json.dll</HintPath></Reference>
+  </ItemGroup>
+</Project>

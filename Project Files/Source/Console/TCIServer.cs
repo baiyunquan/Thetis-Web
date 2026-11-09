@@ -738,6 +738,7 @@ namespace Thetis
         private Console _console;
 		private TcpClient m_client = null;
 		private NetworkStream m_stream = null;
+        private bool m_hasInitialRequest = false;
 		private bool m_stopClient = false;
 		private bool m_disconnected = false;
         private int m_disconnectNotified = 0;
@@ -789,8 +790,13 @@ namespace Thetis
         private readonly clsTCISensorManager m_sensorManager = new clsTCISensorManager();
         private System.Threading.Timer m_tmRxSensors;
         private System.Threading.Timer m_tmTxSensors;
-        public TCPIPtciSocketListener(TcpClient client, Console c, TCPIPtciServer server, int rateLimit)
+        public TCPIPtciSocketListener(TcpClient client, Console c, TCPIPtciServer server, int rateLimit, byte[] initialRequest = null)
 		{
+            if (initialRequest != null)
+            {
+                _m_buffer.AddRange(initialRequest);
+                m_hasInitialRequest = initialRequest.Length > 0;
+            }
 			_console = c;
 			m_nRateLimit = rateLimit;
 			m_server = server;
@@ -1879,114 +1885,19 @@ namespace Thetis
 			       Regex.IsMatch(msg, @"Sec-WebSocket-Key:\s*(.+)", RegexOptions.IgnoreCase);
 		}
 
-		private void serveHttpContent(string msg)
-		{
-			try
-			{
-				string[] lines = msg.Split(new[] { "\r\n", "\n" }, StringSplitOptions.None);
-				if (lines.Length == 0) return;
-				string requestLine = lines[0];
-				string[] parts = requestLine.Split(' ');
-				if (parts.Length < 2) return;
-
-				string rawPath = parts[1];
-				int qIdx = rawPath.IndexOf('?');
-				if (qIdx >= 0) rawPath = rawPath.Substring(0, qIdx);
-				int hIdx = rawPath.IndexOf('#');
-				if (hIdx >= 0) rawPath = rawPath.Substring(0, hIdx);
-
-				string decodedPath = Uri.UnescapeDataString(rawPath);
-				if (decodedPath == "/" || string.IsNullOrWhiteSpace(decodedPath))
-				{
-					decodedPath = "/totw.html";
-				}
-
-				string relativePath = decodedPath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
-				if (relativePath.Contains(".."))
-				{
-					sendHttpResponse(403, "Forbidden", "text/plain", Encoding.UTF8.GetBytes("403 Forbidden"));
-					return;
-				}
-
-				string baseDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "web");
-				if (!Directory.Exists(baseDir))
-				{
-					baseDir = AppDomain.CurrentDomain.BaseDirectory;
-				}
-
-				string filePath = Path.Combine(baseDir, relativePath);
-				if (!File.Exists(filePath))
-				{
-					if (relativePath.Equals("totw.html", StringComparison.OrdinalIgnoreCase))
-					{
-						string alt = Path.Combine(baseDir, "website", "index.html");
-						if (File.Exists(alt)) filePath = alt;
-					}
-				}
-
-				if (File.Exists(filePath))
-				{
-					byte[] fileBytes = File.ReadAllBytes(filePath);
-					string ext = Path.GetExtension(filePath).ToLowerInvariant();
-					string contentType = "application/octet-stream";
-					switch (ext)
-					{
-						case ".html":
-						case ".htm":
-							contentType = "text/html; charset=utf-8";
-							break;
-						case ".js":
-							contentType = "application/javascript; charset=utf-8";
-							break;
-						case ".css":
-							contentType = "text/css; charset=utf-8";
-							break;
-						case ".json":
-							contentType = "application/json; charset=utf-8";
-							break;
-						case ".png":
-							contentType = "image/png";
-							break;
-						case ".jpg":
-						case ".jpeg":
-							contentType = "image/jpeg";
-							break;
-						case ".gif":
-							contentType = "image/gif";
-							break;
-						case ".svg":
-							contentType = "image/svg+xml";
-							break;
-						case ".ico":
-							contentType = "image/x-icon";
-							break;
-						case ".woff":
-							contentType = "font/woff";
-							break;
-						case ".woff2":
-							contentType = "font/woff2";
-							break;
-						case ".wav":
-							contentType = "audio/wav";
-							break;
-						case ".webm":
-							contentType = "audio/webm";
-							break;
-					}
-
-					sendHttpResponse(200, "OK", contentType, fileBytes);
-				}
-				else
-				{
-					string notFoundHtml = "<html><head><title>404 Not Found</title></head><body><h1>404 Not Found</h1><p>The requested file was not found on Thetis Web server.</p></body></html>";
-					sendHttpResponse(404, "Not Found", "text/html; charset=utf-8", Encoding.UTF8.GetBytes(notFoundHtml));
-				}
-			}
-			catch (Exception ex)
-			{
-				Debug.Print("serveHttpContent error: " + ex.Message);
-			}
-		}
+        private void serveHttpContent(string msg)
+        {
+            // Compatibility fallback; normal HTTP is dispatched before a TCI client exists.
+            try
+            {
+                var host = new Thetis.Hosting.CodeHost(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "web"), Thetis.Hosting.HostingConfiguration.Load(), true);
+                host.HandleRequest(m_stream, Thetis.Hosting.HostHttpRequest.Parse(msg), ((IPEndPoint)m_client.Client.RemoteEndPoint).Address, false);
+            }
+            catch (InvalidDataException)
+            {
+                sendHttpResponse(400, "Bad Request", "text/plain", Encoding.UTF8.GetBytes("400 Bad Request"));
+            }
+        }
 
 		private void sendHttpResponse(int statusCode, string statusText, string contentType, byte[] body)
 		{
@@ -2961,23 +2872,29 @@ namespace Thetis
                         continue;
                     }
 
-                    if (!socket.Poll(SOCKET_READ_TIMEOUT_MS * 1000, SelectMode.SelectRead))
-                        continue;
-
-                    if (socket.Available < 1)
+                    if (m_hasInitialRequest)
                     {
-                        m_stopClient = true;
-                        continue;
+                        // Classification already read the HTTP header. Process it before polling:
+                        // browsers wait for 101 before they send their first frame.
+                        m_hasInitialRequest = false;
                     }
-
-					int nRead = m_stream.Read(bytes, 0, bytes.Length);
-                    if (nRead < 1)
+                    else
                     {
-                        m_stopClient = true;
-                        continue;
+                        if (!socket.Poll(SOCKET_READ_TIMEOUT_MS * 1000, SelectMode.SelectRead))
+                            continue;
+                        if (socket.Available < 1)
+                        {
+                            m_stopClient = true;
+                            continue;
+                        }
+                        int nRead = m_stream.Read(bytes, 0, bytes.Length);
+                        if (nRead < 1)
+                        {
+                            m_stopClient = true;
+                            continue;
+                        }
+                        _m_buffer.AddRange(bytes.Take(nRead));
                     }
-
-                    _m_buffer.AddRange(bytes.Take(nRead));
 
 					if (!m_bWebSocket)
 					{
@@ -6626,55 +6543,20 @@ namespace Thetis
         public static void RunCodeWebDemo()
         {
             string root = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "web");
-            if (!File.Exists(Path.Combine(root, "code", "index.html")))
-                throw new FileNotFoundException("Build and stage the Code OSS browser demo first.");
-
-            TcpListener listener = new TcpListener(IPAddress.Loopback, 50001);
+            if (!File.Exists(Path.Combine(root, "code", "asset-manifest.json")))
+                throw new FileNotFoundException("Build and stage the Code OSS browser package first.");
+            var host = new Thetis.Hosting.CodeHost(root, Thetis.Hosting.HostingConfiguration.Load());
+            TcpListener listener = new TcpListener(IPAddress.Any, 50001);
             listener.Start();
             try
             {
                 while (true)
                 {
-                    TcpClient client = listener.AcceptTcpClient();
-                    ThreadPool.QueueUserWorkItem(_ =>
-                    {
-                        using (client)
-                        {
-                            try
-                            {
-                                client.ReceiveTimeout = 10000;
-                                client.SendTimeout = 10000;
-                                using (NetworkStream stream = client.GetStream())
-                                {
-                                    StringBuilder header = new StringBuilder();
-                                    while (header.Length < 16384)
-                                    {
-                                        int next = stream.ReadByte();
-                                        if (next < 0) return;
-                                        header.Append((char)next);
-                                        if (header.Length >= 4 && header.ToString(header.Length - 4, 4) == "\r\n\r\n") break;
-                                    }
-                                    string request = header.ToString();
-                                    // Keep this diagnostic endpoint restricted to loopback browser origins.
-                                    Match host = Regex.Match(request, @"\r\nHost:\s*([^\r\n]+)", RegexOptions.IgnoreCase);
-                                    string authority = host.Success ? host.Groups[1].Value.Trim() : "";
-                                    if (!Regex.IsMatch(authority, @"^(localhost|127\.0\.0\.1|[a-z0-9-]+\.localhost):50001$", RegexOptions.IgnoreCase)) return;
-                                    if (request.StartsWith("GET / HTTP/"))
-                                    {
-                                        byte[] redirect = Encoding.ASCII.GetBytes("HTTP/1.1 302 Found\r\nLocation: /code/\r\nContent-Length: 0\r\nConnection: close\r\n\r\n");
-                                        stream.Write(redirect, 0, redirect.Length);
-                                        return;
-                                    }
-                                    EmbeddedWebContent.SendResponse(stream, request, root);
-                                }
-                            }
-                            catch (IOException ex) { Debug.Print("Code demo connection: " + ex.Message); }
-                            catch (SocketException ex) { Debug.Print("Code demo socket: " + ex.Message); }
-                        }
-                    });
+                    TcpClient accepted = listener.AcceptTcpClient();
+                    host.QueueClient(accepted);
                 }
             }
-            finally { listener.Stop(); }
+            finally { host.Stop(); listener.Stop(); }
         }
 
 		//
@@ -6696,6 +6578,7 @@ namespace Thetis
 			new IPEndPoint(DEFAULT_SERVER, DEFAULT_PORT);
 
 		private TcpListener m_server = null;
+        private Thetis.Hosting.CodeHost m_codeHost;
 		private bool m_stopServer = false;
 		private bool m_stopPurging = false;
 		private Thread m_serverThread = null;
@@ -6987,9 +6870,17 @@ namespace Thetis
 
 				try
 				{
-					m_server.Start();
+                    var generationHost = new Thetis.Hosting.CodeHost(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "web"), Thetis.Hosting.HostingConfiguration.Load(), true);
+                    TcpListener generationListener = m_server;
+                    lock (m_objLocker)
+                    {
+                        m_codeHost = generationHost;
+                        m_stopServer = false;
+                        m_stopPurging = false;
+                    }
+					generationListener.Start();
 
-					m_serverThread = new Thread(new ThreadStart(ServerThreadStart));
+					m_serverThread = new Thread(() => ServerThreadStart(generationListener, generationHost));
 					m_serverThread.Priority = ThreadPriority.BelowNormal;
 					m_serverThread.Name = "TCI server Thread";
 					m_serverThread.Start();
@@ -7006,8 +6897,9 @@ namespace Thetis
 
 					ServerErrorHandlers?.Invoke(se);
 				}
-                catch
+                catch (Exception ex)
 				{
+					m_sLastError = ex.Message;
 					StopServer();
 				}
 			}
@@ -7026,6 +6918,16 @@ namespace Thetis
 
 		public void StopServer()
 		{
+            Thetis.Hosting.CodeHost stoppingHost;
+            lock (m_objLocker)
+            {
+                // Invalidate the generation before callbacks can mutate the legacy list.
+                m_stopServer = true;
+                stoppingHost = m_codeHost;
+                m_codeHost = null;
+            }
+            // Do not hold the list lock while waiting for an in-flight handoff.
+            stoppingHost?.Stop();
 			if (m_server != null)
 			{
 				if (m_bDelegatesAdded)
@@ -7337,60 +7239,58 @@ namespace Thetis
                 socketListener.StopSocketListener();
 			}
 		}
-		private void ServerThreadStart()
-		{
-			//Socket clientSocket = null;
-			TcpClient client = null;
-
-			TCPIPtciSocketListener socketListener = null;
-			bool bAddedDelegates = false;
-			while (!m_stopServer)
-			{
-				try
-				{
-					bAddedDelegates = false;
-					//clientSocket = m_server.AcceptSocket();
-					client = m_server.AcceptTcpClient();
-					client.NoDelay = true;
-
-					socketListener = new TCPIPtciSocketListener(client, console, this, m_nRateLimit);
-
-					lock (m_objLocker)
-					{
-						m_socketListenersList.Add(socketListener);
-					}
-
-					socketListener.ClientConnectedHandlers += ClientConnectedHandler;
-					socketListener.ClientDisconnectedHandlers += ClientDisconnectedHandler;
-					socketListener.ClientErrorHandlers += ClientErrorHandler;
-					bAddedDelegates = true;
-
-					socketListener.StartSocketListener();
-				}
-				catch (SocketException se)
-				{
-                    if (bAddedDelegates && socketListener != null)
-                    {
-						socketListener.ClientConnectedHandlers -= ClientConnectedHandler;
-						socketListener.ClientDisconnectedHandlers -= ClientDisconnectedHandler;
-						socketListener.ClientErrorHandlers -= ClientErrorHandler;
-					}
-					m_stopServer = true;
-					m_sLastError = se.Message;
-					ServerErrorHandlers?.Invoke(se);
-				}
-                catch
+        private void ServerThreadStart(TcpListener listener, Thetis.Hosting.CodeHost generationHost)
+        {
+            while (!generationHost.IsStopped)
+            {
+                TcpClient accepted = null;
+                bool queued = false;
+                try
                 {
-					if (bAddedDelegates && socketListener != null)
-					{
-						socketListener.ClientConnectedHandlers -= ClientConnectedHandler;
-						socketListener.ClientDisconnectedHandlers -= ClientDisconnectedHandler;
-						socketListener.ClientErrorHandlers -= ClientErrorHandler;
-					}
-					m_stopServer = true;
-				}
-			}
-		}
+                    accepted = listener.AcceptTcpClient();
+                    generationHost.QueueClient(accepted, (client, initialRequest) => StartLegacyClient(generationHost, client, initialRequest));
+                    queued = true;
+                }
+                catch (SocketException se)
+                {
+                    if (!generationHost.IsStopped)
+                    {
+                        m_sLastError = se.Message;
+                        ServerErrorHandlers?.Invoke(se);
+                    }
+                    generationHost.Stop();
+                    break;
+                }
+                catch (ObjectDisposedException) { generationHost.Stop(); break; }
+                finally { if (!queued) accepted?.Close(); }
+            }
+        }
+
+        private void StartLegacyClient(Thetis.Hosting.CodeHost generationHost, TcpClient client, byte[] initialRequest)
+        {
+            TCPIPtciSocketListener socketListener = null;
+            try
+            {
+                lock (m_objLocker)
+                {
+                    if (m_stopServer || !ReferenceEquals(m_codeHost, generationHost) || m_socketListenersList == null) { client.Close(); return; }
+                    // Reading the owner reference does not require a WinForms Invoke.
+                    socketListener = new TCPIPtciSocketListener(client, _console, this, m_nRateLimit, initialRequest);
+                    socketListener.ClientConnectedHandlers += ClientConnectedHandler;
+                    socketListener.ClientDisconnectedHandlers += ClientDisconnectedHandler;
+                    socketListener.ClientErrorHandlers += ClientErrorHandler;
+                    m_socketListenersList.Add(socketListener);
+                    socketListener.StartSocketListener();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.Print("TCI connection: " + ex.Message);
+                socketListener?.StopSocketListener();
+                client.Close();
+            }
+        }
+
 		private void PurgingThreadStart()
 		{
 			while (!m_stopPurging)

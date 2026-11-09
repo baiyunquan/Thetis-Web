@@ -9,6 +9,11 @@ namespace Thetis
     {
         public static void SendResponse(Stream stream, string request, string root)
         {
+            SendResponse(stream, request, root, "");
+        }
+
+        public static void SendResponse(Stream stream, string request, string root, string extraHeaders)
+        {
             string[] firstLine = request.Split(new[] { '\r', '\n' }, 2)[0].Split(' ');
             if (firstLine.Length < 3)
             {
@@ -72,20 +77,30 @@ namespace Thetis
                 case ".txt": type = "text/plain; charset=utf-8"; break;
                 default: type = "application/octet-stream"; break;
             }
-            Write(stream, 200, "OK", type, File.ReadAllBytes(path), head, isolated);
+            using (FileStream file = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+            {
+                WriteHeaders(stream, 200, "OK", type, file.Length, isolated, extraHeaders);
+                if (!head) file.CopyTo(stream, 65536);
+                stream.Flush();
+            }
         }
 
         private static void Write(Stream stream, int status, string reason, string type, byte[] body, bool head, bool isolated)
         {
+            WriteHeaders(stream, status, reason, type, body.Length, isolated, "");
+            if (!head) stream.Write(body, 0, body.Length);
+            stream.Flush();
+        }
+
+        private static void WriteHeaders(Stream stream, int status, string reason, string type, long length, bool isolated, string extraHeaders)
+        {
             string headers = "HTTP/1.1 " + status + " " + reason + "\r\nContent-Type: " + type +
-                "\r\nContent-Length: " + body.Length + "\r\nConnection: close\r\n" +
-                "Cache-Control: no-cache\r\nAccess-Control-Allow-Origin: *\r\n" +
+                "\r\nContent-Length: " + length + "\r\nConnection: close\r\n" +
+                "Cache-Control: no-cache\r\n" + extraHeaders +
                 "Cross-Origin-Resource-Policy: cross-origin\r\nX-Content-Type-Options: nosniff\r\n";
             if (isolated) headers += "Cross-Origin-Opener-Policy: same-origin\r\nCross-Origin-Embedder-Policy: require-corp\r\n";
             byte[] bytes = Encoding.ASCII.GetBytes(headers + "\r\n");
             stream.Write(bytes, 0, bytes.Length);
-            if (!head) stream.Write(body, 0, body.Length);
-            stream.Flush();
         }
     }
 }

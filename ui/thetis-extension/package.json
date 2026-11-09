@@ -1,0 +1,38 @@
+{
+  "name": "thetis",
+  "displayName": "Thetis Foundation",
+  "description": "Native Thetis workbench views with an explicitly synthetic radio console.",
+  "version": "0.1.0",
+  "publisher": "thetis",
+  "private": true,
+  "type": "module",
+  "engines": { "vscode": "^1.95.0" },
+  "categories": ["Other"],
+  "browser": "./extension.js",
+  "activationEvents": ["onStartupFinished", "onWebviewPanel:thetis.console"],
+  "capabilities": { "untrustedWorkspaces": { "supported": true }, "virtualWorkspaces": true },
+  "contributes": {
+    "commands": [
+      { "command": "thetis.openConsole", "title": "Thetis: Open Console", "icon": "$(device-desktop)" },
+      { "command": "thetis.openConsoleBeside", "title": "Thetis: Open Console Beside" },
+      { "command": "thetis.openPanel", "title": "Thetis: Open Radio Panel" },
+      { "command": "thetis.restoreDefaultLayout", "title": "Thetis: Restore Default Layout" },
+      { "command": "thetis.layout.restoreDefault", "title": "Thetis: Restore Default Workbench Layout" },
+      { "command": "thetis.selectRadioSkin", "title": "Thetis: Select Radio Skin" },
+      { "command": "thetis.selectDensity", "title": "Thetis: Select Radio Control Density" },
+      { "command": "thetis.diagnostics.echo", "title": "Thetis: Test Diagnostic Echo" },
+      { "command": "thetis.showTrace", "title": "Thetis: Show Interaction Trace" }
+    ],
+    "configuration": {
+      "title": "Thetis Foundation",
+      "properties": {
+        "thetis.foundation.diagnosticEndpoint": { "type": "string", "default": "", "description": "Embedded Thetis diagnostic WebSocket endpoint. Does not control a radio." }
+      }
+    },
+    "menus": {
+      "view/title": [
+        { "command": "thetis.openConsole", "when": "view =~ /^thetis\\./", "group": "navigation" }
+      ]
+    }
+  }
+}

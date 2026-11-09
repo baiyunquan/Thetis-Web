@@ -1,4 +1,4 @@
-param([switch]$SkipInstall)
+param([switch]$SkipInstall, [switch]$RebuildCode)
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path $PSScriptRoot -Parent
 $code = Join-Path $repo 'submodules/vscode'
@@ -41,6 +41,11 @@ $env:PATH = $nodeDir + ';' + $env:PATH
 if ((& $node --version) -ne "v$nodeVersion") { throw 'Incorrect Node version.' }
 if ((& $node $pnpm --version) -ne $pnpmVersion) { throw 'Incorrect pnpm version.' }
 
+if (-not $RebuildCode) {
+    & $node (Join-Path $PSScriptRoot 'scripts/code-cache.mjs') --check
+    if ($LASTEXITCODE -eq 0) { return }
+}
+
 if (-not $SkipInstall) {
     foreach ($install in @($code, (Join-Path $code 'build'), (Join-Path $code 'remote'))) {
         Push-Location $install
@@ -63,6 +68,6 @@ try {
     & $node --max-old-space-size=16384 build/next/index.ts bundle --target web --out out-vscode-web --nls
     if ($LASTEXITCODE -ne 0) { throw 'Code OSS web compilation failed.' }
 } finally { Pop-Location }
-& $node (Join-Path $PSScriptRoot 'package-code-web.mjs')
-if ($LASTEXITCODE -ne 0) { throw 'Code OSS web packaging failed.' }
-Write-Host 'Code OSS web demo built in build/code-web. Run the normal Thetis build to stage it.'
+& $node (Join-Path $PSScriptRoot 'scripts/code-cache.mjs') --write
+if ($LASTEXITCODE -ne 0) { throw 'Code OSS browser cache stamp failed.' }
+Write-Host 'Code OSS browser bundle built. The thetis_ui target builds and packages application panels.'

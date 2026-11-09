@@ -15,7 +15,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "STAGE_TO_PROJECT_BIN": true,
-        "ENABLE_MANAGED_BUILD": true
+        "ENABLE_MANAGED_BUILD": true,
+        "ENABLE_CODE_UI": true
       }
     },
     {
@@ -27,7 +28,8 @@
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "STAGE_TO_PROJECT_BIN": true,
-        "ENABLE_MANAGED_BUILD": true
+        "ENABLE_MANAGED_BUILD": true,
+        "ENABLE_CODE_UI": true
       }
     }
   ],

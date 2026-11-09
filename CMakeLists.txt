@@ -52,30 +52,31 @@ if(EXISTS "${THETIS_DEPS_DIR}/NR_Algorithms_x64/rnnoise_avx2.dll")
 endif()
 
 # Copy runtime dependencies directly alongside the generated DLLs
-set(THETIS_WEBUI_DIR "${CMAKE_CURRENT_SOURCE_DIR}/submodules/thetis-on-the-web")
-set(THETIS_CODE_WEB_DIR "${CMAKE_CURRENT_SOURCE_DIR}/build/code-web")
+option(ENABLE_CODE_UI "Build and stage the Thetis Code OSS browser foundation" ON)
 
 # Explicit, optional browser workbench build; normal radio builds only stage cached output.
 add_custom_target(code_web
     COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${CMAKE_CURRENT_SOURCE_DIR}/ui/build-code-web.ps1"
     WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-    COMMENT "Building pinned Code OSS browser workbench and Hello World extension"
+    COMMENT "Ensuring the pinned Code OSS browser bundle is current"
     VERBATIM
 )
+
+if(ENABLE_CODE_UI)
+    add_custom_target(thetis_ui
+        COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${CMAKE_CURRENT_SOURCE_DIR}/ui/build-ui.ps1"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+        COMMENT "Building the Thetis browser host, extension and public asset manifest"
+        VERBATIM
+    )
+    add_dependencies(thetis_ui code_web)
+endif()
 
 add_custom_target(copy_runtime_dependencies ALL
     COMMAND ${CMAKE_COMMAND} -E copy_if_different ${THETIS_RUNTIME_FILES} "$<TARGET_FILE_DIR:ChannelMaster>"
     DEPENDS ChannelMaster
     COMMENT "Copying third-party runtime DLLs and weights to $<TARGET_FILE_DIR:ChannelMaster>"
 )
-
-if(EXISTS "${THETIS_WEBUI_DIR}/totw.html")
-    add_custom_command(TARGET copy_runtime_dependencies POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:ChannelMaster>/web"
-        COMMAND ${CMAKE_COMMAND} -E copy_directory "${THETIS_WEBUI_DIR}" "$<TARGET_FILE_DIR:ChannelMaster>/web"
-        COMMENT "Copying WebUI assets to $<TARGET_FILE_DIR:ChannelMaster>/web"
-    )
-endif()
 
 # 3. Optional staging target to copy built binaries to 'Project Files/bin/<platform>/<Config>'
 option(STAGE_TO_PROJECT_BIN "Stage built native DLLs to 'Project Files/bin/${THETIS_PLATFORM}/<Config>'" ON)
@@ -92,17 +93,12 @@ if(STAGE_TO_PROJECT_BIN)
         DEPENDS ChannelMaster PA19 wdsp cmASIO
         COMMENT "Staging native DLLs and dependencies to ${PROJECT_BIN_DIR}/$<CONFIG>"
     )
-    if(EXISTS "${THETIS_WEBUI_DIR}/totw.html")
+    if(ENABLE_CODE_UI)
+        add_dependencies(stage_to_project_bin thetis_ui)
         add_custom_command(TARGET stage_to_project_bin POST_BUILD
-            COMMAND ${CMAKE_COMMAND} -E make_directory "${PROJECT_BIN_DIR}/$<CONFIG>/web"
-            COMMAND ${CMAKE_COMMAND} -E copy_directory "${THETIS_WEBUI_DIR}" "${PROJECT_BIN_DIR}/$<CONFIG>/web"
-            COMMENT "Staging WebUI assets to ${PROJECT_BIN_DIR}/$<CONFIG>/web"
-        )
-    endif()
-    if(EXISTS "${THETIS_CODE_WEB_DIR}/index.html")
-        add_custom_command(TARGET stage_to_project_bin POST_BUILD
-            COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${CMAKE_CURRENT_SOURCE_DIR}/ui/stage-code-web.ps1" -Destination "${PROJECT_BIN_DIR}/$<CONFIG>/web/code"
-            COMMENT "Staging Code OSS browser demo to ${PROJECT_BIN_DIR}/$<CONFIG>/web/code"
+            COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${CMAKE_CURRENT_SOURCE_DIR}/ui/stage-code-web.ps1" -Destination "$<TARGET_FILE_DIR:ChannelMaster>/web"
+            COMMAND powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${CMAKE_CURRENT_SOURCE_DIR}/ui/stage-code-web.ps1" -Destination "${PROJECT_BIN_DIR}/$<CONFIG>/web"
+            COMMENT "Replacing generated browser assets with the Thetis Code OSS foundation"
             VERBATIM
         )
     endif()

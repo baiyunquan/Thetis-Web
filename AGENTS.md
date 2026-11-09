@@ -4,12 +4,20 @@
 
 ---
 
+## 0. 核心操作准则：每完成一个原子部分必须自主执行 Git 提交 (Mandatory Self-Commit Protocol)
+
+> **CRITICAL MANDATE FOR AI AGENTS:**  
+> AI Agent 在本代码库中执行任何开发或重构任务时，**每当实现或完成一个独立、自洽、完整的原子部分（Atomic Part / Coherent Step），必须由 AI 自己立即执行一次 Git 提交 (`git commit`)**。  
+> 绝对严禁将多个不相关的任务或阶段性成果累积为单一庞大、模糊的提交。每次提交必须附带规范、明确表达修改意图的提交信息（遵循语义化提交风格，如 `feat:`, `fix:`, `docs:`, `refactor:`, `chore:`），且提交信息中**绝对严禁使用任何表情符号 (Emoji)**。
+
+---
+
 ## 1. Core Architectural Tenets
 
 1. **Strictly Decoupled from Visual Studio IDE**:
    The repository has been permanently migrated from legacy Visual Studio solutions to a modern, decoupled **CMake + MSVC + .NET CLI** toolchain. Development is centered around **Visual Studio Code** and CLI automation.
 2. **Embedded Single-Port WebUI Integration**:
-   The WebUI ([thetis-on-the-web](file:///d:/workspace/Thetis/submodules/thetis-on-the-web)) is embedded as a Git Submodule and served directly by Thetis on port 50001 via HTTP/WebSocket multiplexing. No secondary web server (Node.js, Python, etc.) is allowed for runtime operation.
+   The WebUI is served directly by Thetis on port 50001 via HTTP/WebSocket multiplexing. No secondary web server (Node.js, Python, Kestrel, etc.) is allowed for runtime operation.
 3. **Zero Configuration Drift**:
    All build and debug tasks are declaratively defined in [CMakeLists.txt](file:///d:/workspace/Thetis/CMakeLists.txt), [CMakePresets.json](file:///d:/workspace/Thetis/CMakePresets.json), and [.vscode/](file:///d:/workspace/Thetis/.vscode/).
 
@@ -35,13 +43,10 @@ The repository follows a strict separation between source trees, build caches, a
   - Thetis expects all runtime assets in its execution folder.
   - `Thetis.exe`, native DLLs (`*.dll`), skins (`Skins/`), wisdom files (`Wisdom/`), and WebUI files (`web/`) must be staged here.
   - Native build artifacts must be staged using the CMake target `stage_to_project_bin`.
-- **Git Submodules (`submodules/`)**:
-  - [submodules/thetis-on-the-web](file:///d:/workspace/Thetis/submodules/thetis-on-the-web) is tracked as an independent Git Submodule.
-  - Do NOT commit uncommitted direct file modifications from the submodule into the parent repository commits. Manage upstream pull requests or submodule pointers cleanly.
 
 ### Rule 3: Single-Port Multiplexing Architecture (Port 50001)
-- [`TCIServer.cs`](file:///d:/workspace/Thetis/Project%20Files/Source/Console/TCIServer.cs) is the authoritative implementation for the embedded WebUI and TCI server.
-- Standard HTTP 1.1 GET requests: Handled by `sendHttpResponse()` to serve static WebUI files directly from `web/`.
+- [`TCIServer.cs`](file:///d:/workspace/Thetis/Project%20Files/Source/Console/TCIServer.cs) and [`Hosting/`](file:///d:/workspace/Thetis/Project%20Files/Source/Console/Hosting/) provide the authoritative implementation for the embedded WebUI and TCI server.
+- Standard HTTP 1.1 GET requests: Handled by `CodeHost` and `HostHttp` to serve static WebUI and Code OSS browser assets directly from `web/`.
 - WebSocket upgrade requests: Upgraded via RFC 6455 to full-duplex TCI protocol for binary IQ/Audio streams and rig control.
 - Never add external web servers (e.g. Node.js, Express, Python Flask, Kestrel) for WebUI delivery in production runtime.
 
