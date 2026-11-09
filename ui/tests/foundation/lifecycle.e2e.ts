@@ -1,12 +1,16 @@
-import { test, expect, foundationView } from './helpers';
+import { test, expect, foundationView, captureBrowserEvidence } from './helpers';
 
 test('repeated cold browser sessions release asset and diagnostic clients', async ({ browser, request }, testInfo) => {
+  test.setTimeout(180000); // Four complete cold starts, including native extension discovery.
   const measurements: unknown[] = [];
+  try {
   for (let iteration = 0; iteration < 4; iteration++) {
     const started = Date.now();
     const context = await browser.newContext({ baseURL: testInfo.project.use.baseURL, ignoreHTTPSErrors: false });
+    let evidence: ReturnType<typeof captureBrowserEvidence> | undefined;
     try {
       const page = await context.newPage();
+      evidence = captureBrowserEvidence(page);
       await page.goto('/code/');
       const view = await foundationView(page);
       const initial = Number(await view.locator('#vfo-a').inputValue());
@@ -17,8 +21,13 @@ test('repeated cold browser sessions release asset and diagnostic clients', asyn
       const open = await (await request.get('/code/health')).json();
       expect(open.radioInitialized).toBe(false);
       expect(open.diagnosticConnections).toBe(1);
-      measurements.push({ iteration, readyAndFirstInputMs: Date.now() - started, open });
-    } finally { await context.close(); }
+      measurements.push({ iteration, readyAndFirstInputMs: Date.now() - started, open, events: evidence.events });
+    } finally {
+      measurements.push({ iteration, events: evidence?.events, failures: evidence?.failures });
+      evidence?.markClosing();
+      await context.close();
+    }
+    expect(evidence?.failures).toEqual([]);
     let closed: any;
     await expect.poll(async () => {
       closed = await (await request.get('/code/health')).json();
@@ -27,5 +36,7 @@ test('repeated cold browser sessions release asset and diagnostic clients', asyn
     }, { timeout: 15000 }).toEqual([1, 0]);
     measurements.push({ iteration, closed });
   }
-  await testInfo.attach('connection-and-startup-measurements', { body: JSON.stringify({ browser: browser.version(), measurements }, null, 2), contentType: 'application/json' });
+  } finally {
+    await testInfo.attach('connection-and-startup-measurements', { body: JSON.stringify({ browser: browser.version(), measurements }, null, 2), contentType: 'application/json' });
+  }
 });

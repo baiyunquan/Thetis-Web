@@ -1,30 +1,43 @@
 import { test as base, expect, type Page, type Frame } from '@playwright/test';
 import { knownUpstreamError, replacedWebviewPlaceholder } from './browser-errors';
 const viewRecreations = new WeakSet<Page>();
+const reloads = new WeakSet<Page>();
 /** Subsequent cancellations of Code documents disposed by native view actions remain in raw logs. */
 export function recordNativeViewRecreation(page: Page) { viewRecreations.add(page); }
-export const test = base.extend<{ browserEvidence: void }>({
-  browserEvidence: [async ({ page }, use, testInfo) => {
+export async function reloadWorkbench(page: Page) {
+  reloads.add(page);
+  try { await page.reload(); } finally { reloads.delete(page); }
+}
+export function captureBrowserEvidence(page: Page) {
+    let closing = false;
     const events: unknown[] = [];
     const failures: string[] = [];
     page.on('console', message => events.push({ kind: 'console', level: message.type(), text: message.text(), location: message.location() }));
     page.on('pageerror', error => {
-      const known = knownUpstreamError(error, viewRecreations.has(page));
+      const known = knownUpstreamError(error, viewRecreations.has(page) || reloads.has(page));
       events.push({ kind: 'pageerror', message: error.message, stack: error.stack, knownUpstream: known });
       if (!known) failures.push(error.stack ?? error.message);
     });
     page.on('requestfailed', request => {
-      const expected = replacedWebviewPlaceholder(request.url(), request.failure()?.errorText, viewRecreations.has(page) && request.isNavigationRequest());
-      events.push({ kind: 'requestfailed', url: request.url(), failure: request.failure(), expectedPlaceholderCancellation: expected });
+      const canceled = ['net::ERR_ABORTED', 'NS_BINDING_ABORTED', 'Load request cancelled', 'Frame load interrupted', 'NS_ERROR_FAILURE'].includes(request.failure()?.errorText ?? '');
+      const clientClosed = closing && canceled;
+      const reloaded = reloads.has(page) && canceled && new URL(request.url()).pathname.startsWith('/code/');
+      const expected = clientClosed || reloaded || replacedWebviewPlaceholder(request.url(), request.failure()?.errorText, viewRecreations.has(page));
+      events.push({ kind: 'requestfailed', url: request.url(), failure: request.failure(), expectedPlaceholderCancellation: expected, expectedClientClosure: clientClosed, expectedReloadCancellation: reloaded });
       if (!expected) failures.push(`${request.failure()?.errorText} ${request.url()}`);
     });
     page.on('response', response => {
       events.push({ kind: 'response', url: response.url(), status: response.status(), bytes: response.headers()['content-length'], timing: response.request().timing() });
       if (response.status() >= 400) failures.push(`${response.status()} ${response.url()}`);
     });
+    return { events, failures, markClosing: () => { closing = true; } };
+}
+export const test = base.extend<{ browserEvidence: void }>({
+  browserEvidence: [async ({ page }, use, testInfo) => {
+    const evidence = captureBrowserEvidence(page);
     await use();
-    await testInfo.attach('browser-network-log', { body: JSON.stringify(events, null, 2), contentType: 'application/json' });
-    if (testInfo.status === testInfo.expectedStatus) expect(failures, 'unexpected browser or network errors (raw log attached)').toEqual([]);
+    await testInfo.attach('browser-network-log', { body: JSON.stringify(evidence.events, null, 2), contentType: 'application/json' });
+    if (testInfo.status === testInfo.expectedStatus) expect(evidence.failures, 'unexpected browser or network errors (raw log attached)').toEqual([]);
   }, { auto: true }]
 });
 export { expect };
@@ -52,8 +65,8 @@ export async function command(page: Page, title: string, pickerFollows = false) 
 }
 
 /** Read-only qualification of Code's asynchronous native storage, never a product state writer. */
-export async function waitNativeStorage(page: Page, fragments: string[]) {
-  await expect.poll(() => page.evaluate(async fragments => {
+export async function waitNativeStorage(page: Page, fragments: string[], absent: string[] = []) {
+  await expect.poll(() => page.evaluate(async ({ fragments, absent }) => {
     const values: string[] = [];
     for (const info of await indexedDB.databases()) {
       if (!info.name?.startsWith('vscode-web-state-db-')) continue;
@@ -70,8 +83,15 @@ export async function waitNativeStorage(page: Page, fragments: string[]) {
           request.onerror = () => reject(request.error);
         });
         values.push(...rows.map(String));
+        const keys = await new Promise<IDBValidKey[]>((resolve, reject) => {
+          const request = db.transaction('ItemTable', 'readonly').objectStore('ItemTable').getAllKeys();
+          request.onsuccess = () => resolve(request.result);
+          request.onerror = () => reject(request.error);
+        });
+        values.push(...rows.map((value, index) => `${String(keys[index])}=${String(value)}`));
       } finally { db.close(); }
     }
-    return fragments.every(fragment => values.some(value => value.includes(fragment)));
-  }, fragments), { message: 'native Code state should reach IndexedDB before a raw browser reload', timeout: 20000 }).toBe(true);
+    return { missing: fragments.filter(fragment => !values.some(value => value.includes(fragment))),
+      unexpected: absent.filter(fragment => values.some(value => value.includes(fragment))), focused: document.hasFocus() };
+  }, { fragments, absent }), { message: 'native Code state should reach IndexedDB before a raw browser reload', timeout: 20000 }).toMatchObject({ missing: [], unexpected: [] });
 }

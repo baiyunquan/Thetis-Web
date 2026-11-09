@@ -1,6 +1,7 @@
-import { test, expect, foundationView, command, waitNativeStorage, recordNativeViewRecreation } from './helpers';
+import { test, expect, foundationView, command, waitNativeStorage, recordNativeViewRecreation, reloadWorkbench } from './helpers';
 
 test('native collapse, move, hide, reload and restoration preserve the shared model', async ({ page }, testInfo) => {
+  test.setTimeout(180000); // Three full browser reloads and native IndexedDB flushes.
   await page.goto('/code/');
   let consoleView = await foundationView(page);
   for (const id of ['thetis.operation.power', 'thetis.operation.gain', 'thetis.receiver.meters', 'thetis.receiver.bands', 'thetis.receiver.modes', 'thetis.receiver.filters']) await foundationView(page, id);
@@ -11,9 +12,13 @@ test('native collapse, move, hide, reload and restoration preserve the shared mo
   await expect(power).toHaveAttribute('aria-expanded', 'true');
   await power.click();
   await expect(power).toHaveAttribute('aria-expanded', 'false');
-  await waitNativeStorage(page, ['"thetis.operation.power":{"collapsed":true', '"serializedGrid":', 'thetis.console', '17890123']);
-  await page.reload();
+  await waitNativeStorage(page, ['"thetis.operation.power":{"collapsed":true', '"serializedGrid":', 'thetis.console', '17890123', 'workbench.sidebar.activeviewletid=workbench.view.extension.thetis-operation']);
+  await reloadWorkbench(page);
   consoleView = await foundationView(page);
+  // Built Code may select Explorer on a raw browser cold start (layout.ts).
+  // Reveal the saved container without resetting its saved view state.
+  const operate = page.getByRole('tab', { name: 'Operate', exact: true });
+  if (await operate.getAttribute('aria-selected') !== 'true') await operate.click();
   await expect(power).toHaveAttribute('aria-expanded', 'false');
   await expect(consoleView.locator('#vfo-a')).toHaveValue('17890123');
   const gain = await foundationView(page, 'thetis.operation.gain');
@@ -24,7 +29,7 @@ test('native collapse, move, hide, reload and restoration preserve the shared mo
   await page.locator('.quick-input-list .monaco-list-row').filter({ hasText: /^Receiver Controls$/ }).click();
   await expect(page.locator('.auxiliarybar .pane-header').filter({ hasText: 'Audio & RF Gain' })).toBeVisible();
   await waitNativeStorage(page, ['"thetis.operation.gain":"workbench.view.extension.thetis-receiver-controls"']);
-  await page.reload();
+  await reloadWorkbench(page);
   consoleView = await foundationView(page);
   const moved = page.locator('.auxiliarybar .pane-header').filter({ hasText: 'Audio & RF Gain' });
   await expect(moved).toBeVisible();
@@ -38,7 +43,7 @@ test('native collapse, move, hide, reload and restoration preserve the shared mo
   await page.keyboard.press('Enter');
   await expect(moved).toBeHidden();
   await waitNativeStorage(page, ['"id":"thetis.operation.gain","isHidden":true']);
-  await page.reload();
+  await reloadWorkbench(page);
   await foundationView(page);
   await expect(page.locator('.pane-header').filter({ hasText: 'Audio & RF Gain' })).toBeHidden();
   await command(page, 'Thetis: Restore Default Layout');

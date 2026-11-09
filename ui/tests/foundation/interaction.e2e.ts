@@ -1,4 +1,4 @@
-import { test, expect, foundationView, command, recordNativeViewRecreation, waitNativeStorage } from './helpers';
+import { test, expect, foundationView, command, recordNativeViewRecreation, waitNativeStorage, reloadWorkbench } from './helpers';
 
 test('the first physical click, VFO edits, receiver targeting, themes and reload preserve synthetic state', async ({ page }, testInfo) => {
   await page.goto('/code/');
@@ -29,16 +29,32 @@ test('the first physical click, VFO edits, receiver targeting, themes and reload
   await expect(view.locator('body')).toHaveAttribute('data-skin', 'midnight');
   await view.locator('#radio-density').selectOption('touch');
   await expect(view.locator('#radio-root')).toHaveAttribute('data-density', 'touch');
+  const pauseEvents = await view.evaluateHandle(() => {
+    const events: unknown[] = [];
+    for (const type of ['pointerdown', 'pointerup', 'mousedown', 'mouseup', 'click', 'focusin', 'focusout', 'scroll']) {
+      document.addEventListener(type, event => events.push({ type, target: (event.target as HTMLElement)?.id,
+        active: (document.activeElement as HTMLElement)?.id, scrollY, y: (event as MouseEvent).clientY, time: performance.now() }), { capture: true, passive: true });
+    }
+    return events;
+  });
   await view.locator('#plot-pause').click();
-  await expect(view.locator('#plot-pause')).toHaveAccessibleName('Resume synthetic plots');
+  try {
+    await expect(view.locator('#plot-pause')).toHaveAccessibleName('Resume synthetic plots');
+  } catch (error) {
+    await testInfo.attach('pause-browser-events', { body: JSON.stringify(await pauseEvents.jsonValue()), contentType: 'application/json' });
+    await command(page, 'Thetis: Show Interaction Trace');
+    await testInfo.attach('failed-pause-input-trace', { body: await page.locator('.panel .view-lines').innerText(), contentType: 'text/plain' });
+    throw error;
+  }
+  await pauseEvents.dispose();
   await page.screenshot({ path: testInfo.outputPath('synthetic-interaction.png'), fullPage: true });
   // A layout command must preserve the model, and a normal reload must restore the open panel.
   recordNativeViewRecreation(page);
   await command(page, 'Thetis: Restore Default Layout');
   view = await foundationView(page);
   await expect(view.locator('#vfo-a')).toHaveValue('14321567');
-  await waitNativeStorage(page, ['"thetis.operation.device":{"collapsed":false', '"serializedGrid":', '14321567']);
-  await page.reload();
+  await waitNativeStorage(page, ['"thetis.operation.device":{"collapsed":false', '"serializedGrid":', '14321567', '"plotPaused":true']);
+  await reloadWorkbench(page);
   view = await foundationView(page);
   await expect(view.locator('#vfo-a')).toHaveValue('14321567');
   await expect(view.locator('body')).toHaveAttribute('data-skin', 'midnight');
@@ -61,9 +77,15 @@ test('an intentionally closed Console stays closed after reload and can be reope
   await foundationView(page);
   const tab = page.getByRole('tab', { name: /Thetis Console/ }).first();
   await tab.click();
+  await waitNativeStorage(page, ['"serializedGrid":', 'thetis.console', '"thetis.foundation.firstUse.v1":true']);
   await tab.locator('.action-label.codicon-close-small').click();
   await expect(page.getByRole('tab', { name: /Thetis Console/ })).toHaveCount(0);
-  await page.reload();
+  // Closing an isolated webview can leave WebKit's workbench document blurred.
+  // Native Code only collects periodic state while its document has focus.
+  await page.locator('.editor .editor-group-container').click({ position: { x: 30, y: 80 } });
+  // EditorPart deletes its saved grid when all editor groups are empty.
+  await waitNativeStorage(page, ['"thetis.foundation.firstUse.v1":true'], ['memento/workbench.parts.editor={"editorpart.state":']);
+  await reloadWorkbench(page);
   await expect(page.getByText('Thetis: Foundation / Demo', { exact: true })).toBeVisible();
   await expect(page.getByRole('tab', { name: /Thetis Console/ })).toHaveCount(0);
   await command(page, 'Thetis: Open Console');

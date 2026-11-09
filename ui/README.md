@@ -36,6 +36,10 @@ Each section is an independent native TreeView or WebviewView. Console occupies 
 
 Native browser storage flushes asynchronously, normally every five seconds. Abrupt reload before that flush can lose recent layout/editor changes; qualification waits for actual IndexedDB state, without writing native storage keys. The native **Developer: Reload Window** command takes Code's ordered shutdown/flush path. Code also guards the first 100 ms of context-menu mouse-up events; keyboard menu actions provide deterministic native input during automation.
 
+Periodic collection also requires the workbench document to have focus. WebKit can leave that document blurred after closing an isolated webview. Click the empty editor to return focus and allow storage to flush, or use **Developer: Reload Window**. Reloading while blurred can restore the last saved tab. Qualification records this native limitation and uses physical workbench input before observing saved state.
+
+Built Code can select Explorer after a raw browser cold start even when Operate was selected before reload. Its [startup policy](D:/workspace/Thetis/submodules/vscode/src/vs/workbench/browser/layout.ts) distinguishes cold starts from **Developer: Reload Window**. Selecting Operate again reveals the persisted view locations, visibility and collapse state. Foundation preserves this upstream policy rather than forcing the initial layout on every activation; active-container selection after raw reload is a known limitation.
+
 VFO edits use integer Hz. Receiver selection targets synthetic mode/filter/band/gain actions; selecting RX2 does not enable its plot. Recreated panels receive the latest shared snapshot. Plots can be paused. Classic/Midnight skins affect panel tokens independently of the workbench theme. Automatic, Expanded, Compact and Touch densities are available. Legacy XML/PNG import belongs to Stage 8.
 
 Controls enable after a ready/snapshot handshake. Pointer/focus/action/acknowledgement traces appear in **Thetis: Show Interaction Trace** and Sequence / Interaction Trace. The extension owns one non-radio diagnostic socket; webviews communicate through it.
@@ -61,6 +65,7 @@ Start staged demo mode before browser tests:
 ```powershell
 node build/tools/pnpm-12.16.0/package/bin/pnpm.mjs --dir ui run test:e2e -- foundation
 powershell -NoProfile -ExecutionPolicy Bypass -File tests/Thetis.Hosting.Tests/run.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File tests/Thetis.Resources.Tests/run.ps1
 powershell -NoProfile -ExecutionPolicy Bypass -File ui/baseline/test-setup-certificates.ps1
 node --test ui/baseline/*.test.mjs
 pwsh -NoProfile -File ui/test-static-content.ps1
@@ -69,6 +74,8 @@ pwsh -NoProfile -File ui/test-static-content.ps1
 The hosting harness stops Thetis; restart it before later browser runs. [Playwright](D:/workspace/Thetis/ui/playwright.config.ts) accepts `THETIS_BASE_URL` for trusted LAN HTTPS; certificate errors fail tests. Install Playwright engines as development tools; Edge must be installed locally. Screenshots, raw browser/network logs, traces and results go beneath `build/foundation-evidence/`. Known upstream messages remain visible; unexpected failures require investigation.
 
 The net48 harness tests real TCP/TLS 1.2, framing, header/frame preservation, restrictions and stop/restart cleanup. It creates/removes an isolated leaf certificate. The helper integration test creates/reuses an isolated CA/leaf pair, checks non-exportable keys and unchanged trust, then removes test certificates. Neither configures production DNS/trust/firewall rules.
+
+The resource probe runs an isolated net48 AppDomain with the staged application's binding policy and reads the Database Manager startup image. It constructs no radio services or Forms. It guards the resource-reader version redirect required by CLI-generated resources and the deployed dependency version; it does not qualify a complete visible WinForms startup.
 
 The [qualification record](D:/workspace/Thetis/docs/ui-parity/qualification.md) separates local automation from remote-client, WinForms and hardware evidence. A TLS harness does not establish trusted cross-machine browser acceptance. Historical pictures do not override current reachable handlers. The original [Hello World extension](D:/workspace/Thetis/ui/hello-world/package.json) and host remain reference fixtures; normal packaging loads Thetis.
 
