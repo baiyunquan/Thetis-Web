@@ -1,6 +1,7 @@
 /** Exceptions observed in the unmodified fdefc478 Code bundle. Always retain raw logs. */
-export function knownUpstreamError(error: { message: string; stack?: string }): string | undefined {
+export function knownUpstreamError(error: { name?: string; message: string; stack?: string }, recreatingViews = false): string | undefined {
   const stack = error.stack ?? '';
+  if (recreatingViews && error.name === 'Canceled' && error.message === 'Canceled' && stack.trim() === 'Canceled: Canceled') return 'Code canceled a deliberately recreated native view';
   if (error.message === "ENOPRO: No file system provider found for resource 'file:///.copilot/config.json'"
     && stack.includes('AgentPluginService') && stack.includes('/code/vscode/out/vs/workbench/workbench.web.main.internal.js:')) return 'Code AgentPluginService has no browser file provider';
   if (error.message === 'Found unexpected null' && stack.includes('assertIsDefined')
@@ -11,5 +12,5 @@ export function knownUpstreamError(error: { message: string; stack?: string }): 
 export function replacedWebviewPlaceholder(url: string, error?: string, recreatingViews = false): boolean {
   const path = new URL(url).pathname;
   return (path.endsWith('/webview/browser/pre/fake.html') || (recreatingViews && path.endsWith('/webview/browser/pre/index.html')))
-    && ['net::ERR_ABORTED', 'Load request cancelled', 'Frame load interrupted', 'NS_BINDING_ABORTED'].includes(error ?? '');
+    && ['net::ERR_ABORTED', 'Load request cancelled', 'Frame load interrupted', 'NS_BINDING_ABORTED', ...(recreatingViews ? ['NS_ERROR_FAILURE'] : [])].includes(error ?? '');
 }

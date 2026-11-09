@@ -9,7 +9,7 @@ export const test = base.extend<{ browserEvidence: void }>({
     const failures: string[] = [];
     page.on('console', message => events.push({ kind: 'console', level: message.type(), text: message.text(), location: message.location() }));
     page.on('pageerror', error => {
-      const known = knownUpstreamError(error);
+      const known = knownUpstreamError(error, viewRecreations.has(page));
       events.push({ kind: 'pageerror', message: error.message, stack: error.stack, knownUpstream: known });
       if (!known) failures.push(error.stack ?? error.message);
     });

@@ -7,6 +7,9 @@ test('known upstream diagnostics require the precise error and Code source stack
   expect(knownUpstreamError({ message })).toBeUndefined();
   expect(knownUpstreamError({ message: 'ENOPRO: radio configuration unavailable', stack })).toBeUndefined();
   expect(knownUpstreamError({ message: 'Found unexpected null', stack: 'at thetis/main.js:1' })).toBeUndefined();
+  const canceled = { name: 'Canceled', message: 'Canceled', stack: 'Canceled: Canceled\n' };
+  expect(knownUpstreamError(canceled)).toBeUndefined();
+  expect(knownUpstreamError(canceled, true)).toBeDefined();
   expect(knownUpstreamError({ message: 'Found unexpected null', stack: 'assertIsDefined hookupOnLoadHandlers http://hash.localhost:50001/code/vscode/out/vs/workbench/contrib/webview/browser/pre/index.html:1222:43' })).toBeDefined();
 });
 test('only cancelled temporary webview documents are expected resource failures', () => {
@@ -14,5 +17,7 @@ test('only cancelled temporary webview documents are expected resource failures'
   expect(replacedWebviewPlaceholder(root + 'fake.html?id=1', 'Frame load interrupted')).toBe(true);
   expect(replacedWebviewPlaceholder(root + 'index.html', 'Frame load interrupted')).toBe(false);
   expect(replacedWebviewPlaceholder(root + 'index.html', 'Frame load interrupted', true)).toBe(true);
+  expect(replacedWebviewPlaceholder(root + 'index.html', 'NS_ERROR_FAILURE')).toBe(false);
+  expect(replacedWebviewPlaceholder(root + 'index.html', 'NS_ERROR_FAILURE', true)).toBe(true);
   expect(replacedWebviewPlaceholder(root + 'fake.html', 'Connection refused')).toBe(false);
 });

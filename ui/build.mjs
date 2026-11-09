@@ -4,6 +4,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { createHash } from 'node:crypto';
 import { build } from 'esbuild';
 import { codeCacheMatches, describeCodeCache } from './scripts/code-cache.mjs';
+import { adaptWebviewController, WEBVIEW_CONTROLLER_ADAPTER } from './code-oss-host/compat/webview-controller.mjs';
 
 const ui = path.dirname(fileURLToPath(import.meta.url));
 const repo = path.dirname(ui);
@@ -53,6 +54,13 @@ delete manifest.type;
 await fs.writeFile(path.join(out, 'extensions/thetis/package.json'), JSON.stringify(manifest, null, 2) + '\n');
 await fs.writeFile(path.join(out, 'extensions/thetis/package.nls.json'), '{}\n');
 await fs.cp(path.join(code, 'out-vscode-web'), path.join(out, 'vscode/out'), { recursive: true, filter: file => !file.endsWith('.map') });
+const pre = path.join(out, 'vscode/out/vs/workbench/contrib/webview/browser/pre');
+const adapted = adaptWebviewController(cache.commit, {
+  html: await fs.readFile(path.join(pre, 'index.html'), 'utf8'),
+  worker: await fs.readFile(path.join(pre, 'service-worker.js'), 'utf8')
+});
+await fs.writeFile(path.join(pre, 'index.html'), adapted.html);
+await fs.writeFile(path.join(pre, 'service-worker.js'), adapted.worker);
 const dependencies = getFlatProductionDependencies(path.join(code, 'remote/web'));
 for (const { folder, base } of dependencies) {
   await fs.cp(folder, path.join(out, 'vscode', path.relative(base, folder)), {
@@ -64,8 +72,8 @@ for (const name of ['theme-defaults', 'theme-seti']) await fs.cp(path.join(code,
 for (const name of ['LICENSE.txt', 'ThirdPartyNotices.txt']) await fs.copyFile(path.join(code, name), path.join(out, 'vscode', name));
 await fs.copyFile(path.join(code, 'resources/server/favicon.ico'), path.join(out, 'vscode/favicon.ico'));
 const { version } = JSON.parse(await fs.readFile(path.join(code, 'package.json'), 'utf8'));
-await fs.writeFile(path.join(out, 'build-info.json'), JSON.stringify({ version, commit: cache.commit, uiBuildId, codeFingerprint: cache.fingerprint, mode: 'foundation' }, null, 2) + '\n');
+await fs.writeFile(path.join(out, 'build-info.json'), JSON.stringify({ version, commit: cache.commit, uiBuildId, codeFingerprint: cache.fingerprint, adapters: [WEBVIEW_CONTROLLER_ADAPTER], mode: 'foundation' }, null, 2) + '\n');
 const files = [...await list(out), 'asset-manifest.json'].sort();
-await fs.writeFile(path.join(out, 'asset-manifest.json'), JSON.stringify({ schemaVersion: 1, codeCommit: cache.commit, uiBuildId, files }, null, 2) + '\n');
+await fs.writeFile(path.join(out, 'asset-manifest.json'), JSON.stringify({ schemaVersion: 1, codeCommit: cache.commit, uiBuildId, adapters: [WEBVIEW_CONTROLLER_ADAPTER], files }, null, 2) + '\n');
 await fs.cp(out, staged, { recursive: true });
 console.log(`Built Thetis foundation ${uiBuildId.slice(0, 12)} using cached Code OSS ${cache.commit.slice(0, 12)}; ${files.length} public files.`);
