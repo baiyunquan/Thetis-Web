@@ -255,6 +255,7 @@ jobs:
           path: |
             Project Files/bin/x64/Release
             build/bin
+            ui/dist
           if-no-files-found: error
 
   # Stage 3: Verification, Packaging and Artifact Publishing (Strictly Read-Only Cache)
