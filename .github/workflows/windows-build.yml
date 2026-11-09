@@ -1,29 +1,43 @@
 name: Windows CI Build
 
 on:
-  push:
-    branches:
-      - main
-      - 'feat/**'
+  workflow_dispatch:
+    inputs:
+      clean_all_caches:
+        description: 'Force delete all caches before building'
+        required: false
+        type: boolean
+        default: false
+      prune_stale_caches:
+        description: 'Prune outdated caches not matching current keys'
+        required: false
+        type: boolean
+        default: true
   pull_request:
     branches:
       - main
       - 'feat/**'
-  workflow_dispatch:
 
 permissions:
   contents: read
+  actions: write
 
 jobs:
-  # Stage 1: Dependency Preparation and Cache Read/Write Separation
-  prepare-dependencies:
-    name: "Stage 1: Prepare Dependencies & Cache"
+  build-and-verify:
+    name: "Thetis CI Build & Verification (Windows x64)"
     runs-on: windows-latest
     defaults:
       run:
         shell: powershell
+    env:
+      MSBUILDUSESERVER: '1'
+      DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER: '0'
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
     steps:
+      # =======================================================================
+      # Phase 1: Cache Management, Restoring & Dependency Preparation
+      # =======================================================================
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
@@ -38,6 +52,33 @@ jobs:
         uses: actions/setup-dotnet@v4
         with:
           dotnet-version: '8.0.x'
+
+      - name: Prune or reset outdated caches via GitHub CLI
+        run: |
+          if ('${{ github.event.inputs.clean_all_caches }}' -eq 'true') {
+            Write-Host "[INFO] User requested full cache wipe. Deleting all caches..." -ForegroundColor Yellow
+            gh cache delete --all --succeed-on-no-caches
+          } elseif ('${{ github.event.inputs.prune_stale_caches }}' -ne 'false') {
+            Write-Host "[INFO] Checking for stale/outdated caches on this ref..." -ForegroundColor Cyan
+            $currentKeys = @(
+              "${{ runner.os }}-nuget-${{ hashFiles('Project Files/Source/Console/packages.config') }}",
+              "${{ runner.os }}-build-tools-${{ hashFiles('submodules/vscode/.nvmrc', 'submodules/vscode/package.json') }}",
+              "${{ runner.os }}-ui-node-modules-${{ hashFiles('ui/pnpm-lock.yaml') }}",
+              "${{ runner.os }}-pnpm-store-${{ hashFiles('ui/pnpm-lock.yaml', 'submodules/vscode/pnpm-lock.yaml', 'submodules/vscode/build/pnpm-lock.yaml', 'submodules/vscode/remote/pnpm-lock.yaml') }}",
+              "${{ runner.os }}-vscode-web-${{ hashFiles('submodules/vscode/.nvmrc', 'submodules/vscode/package.json', 'submodules/vscode/pnpm-lock.yaml', 'submodules/vscode/build/pnpm-lock.yaml', 'submodules/vscode/remote/pnpm-lock.yaml') }}"
+            )
+            try {
+              $cachesJson = gh cache list --ref "${{ github.ref }}" --json id,key | ConvertFrom-Json
+              foreach ($c in $cachesJson) {
+                if ($currentKeys -notcontains $c.key) {
+                  Write-Host "[CLEANUP] Deleting outdated cache: $($c.key) (ID: $($c.id))" -ForegroundColor DarkYellow
+                  gh cache delete $c.id
+                }
+              }
+            } catch {
+              Write-Host "[WARN] Cache cleanup check encountered a non-fatal error: $_"
+            }
+          }
 
       - name: Restore NuGet packages cache (read)
         id: cache-nuget
@@ -118,6 +159,36 @@ jobs:
           Write-Host "[INFO] Installing UI frontend node modules..."
           powershell -NoProfile -ExecutionPolicy Bypass -File ./ui/build-ui.ps1
 
+      # =======================================================================
+      # Phase 2: Core Compilation via Resident Roslyn Compiler Server & MSVC
+      # =======================================================================
+      - name: Setup MSVC developer command prompt
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
+
+      - name: Build Thetis with resident Roslyn compiler server
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File ./build.ps1 -All -Config Release
+
+      # =======================================================================
+      # Phase 3: Verification, Packaging & Explicit Cache Writing
+      # =======================================================================
+      - name: Run Thetis.Hosting C# Tests
+        run: |
+          powershell -NoProfile -ExecutionPolicy Bypass -File tests/Thetis.Hosting.Tests/run.ps1
+
+      - name: Run UI Vitest Unit Tests
+        run: |
+          & './build/tools/node-v24.22.1-win-x64/node.exe' ui/scripts/test.mjs unit
+
+      - name: Publish Thetis Release Package
+        uses: actions/upload-artifact@v4
+        with:
+          name: Thetis-Release-x64
+          path: Project Files/bin/x64/Release
+          if-no-files-found: error
+
       - name: Save NuGet packages cache (write)
         if: steps.cache-nuget.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
@@ -161,171 +232,3 @@ jobs:
             submodules/vscode/out-vscode-web
             build/code-cache.json
           key: ${{ steps.cache-vscode-web.outputs.cache-primary-key || format('{0}-vscode-web-{1}', runner.os, hashFiles('submodules/vscode/.nvmrc', 'submodules/vscode/package.json', 'submodules/vscode/pnpm-lock.yaml', 'submodules/vscode/build/pnpm-lock.yaml', 'submodules/vscode/remote/pnpm-lock.yaml')) }}
-
-  # Stage 2: Core Compilation via Resident Roslyn Compiler Server (Strictly Read-Only Cache)
-  compile-thetis:
-    name: "Stage 2: Compile Thetis (Roslyn Server & Native)"
-    needs: prepare-dependencies
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: powershell
-    env:
-      MSBUILDUSESERVER: '1'
-      DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER: '0'
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-          submodules: false
-
-      - name: Checkout submodules shallowly
-        run: |
-          git submodule update --init --recursive --depth 1
-
-      - name: Setup MSVC developer environment
-        uses: ilammy/msvc-dev-cmd@v1
-        with:
-          arch: x64
-
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Restore NuGet packages cache (read-only)
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            Project Files/Source/packages
-            ${{ env.LOCALAPPDATA }}/NuGet/Cache
-          key: ${{ runner.os }}-nuget-${{ hashFiles('Project Files/Source/Console/packages.config') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
-
-      - name: Restore build tools cache (read-only)
-        uses: actions/cache/restore@v4
-        with:
-          path: build/tools
-          key: ${{ runner.os }}-build-tools-${{ hashFiles('submodules/vscode/.nvmrc', 'submodules/vscode/package.json') }}
-          restore-keys: |
-            ${{ runner.os }}-build-tools-
-
-      - name: Restore UI node modules cache (read-only)
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            ui/node_modules
-            build/ui-dependencies.sha256
-          key: ${{ runner.os }}-ui-node-modules-${{ hashFiles('ui/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-ui-node-modules-
-
-      - name: Restore pnpm store cache (read-only)
-        uses: actions/cache/restore@v4
-        with:
-          path: ${{ env.LOCALAPPDATA }}/pnpm/store
-          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('ui/pnpm-lock.yaml', 'submodules/vscode/pnpm-lock.yaml', 'submodules/vscode/build/pnpm-lock.yaml', 'submodules/vscode/remote/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-store-
-
-      - name: Restore Code OSS bundle and dependencies cache (read-only)
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            submodules/vscode/node_modules
-            submodules/vscode/build/node_modules
-            submodules/vscode/remote/node_modules
-            submodules/vscode/out-vscode-web
-            build/code-cache.json
-          key: ${{ runner.os }}-vscode-web-${{ hashFiles('submodules/vscode/.nvmrc', 'submodules/vscode/package.json', 'submodules/vscode/pnpm-lock.yaml', 'submodules/vscode/build/pnpm-lock.yaml', 'submodules/vscode/remote/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-vscode-web-
-
-      - name: Build Thetis with resident Roslyn compiler server
-        run: |
-          powershell -NoProfile -ExecutionPolicy Bypass -File ./build.ps1 -All -Config Release
-
-      - name: Upload compiled binaries for test stage
-        uses: actions/upload-artifact@v4
-        with:
-          name: thetis-staged-release
-          path: |
-            Project Files/bin/x64/Release
-            build/bin
-            ui/dist
-          if-no-files-found: error
-
-  # Stage 3: Verification, Packaging and Artifact Publishing (Strictly Read-Only Cache)
-  test-and-package:
-    name: "Stage 3: Verification & Packaging"
-    needs: compile-thetis
-    runs-on: windows-latest
-    defaults:
-      run:
-        shell: powershell
-    env:
-      MSBUILDUSESERVER: '1'
-      DOTNET_CLI_DO_NOT_USE_MSBUILD_SERVER: '0'
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-          submodules: false
-
-      - name: Setup .NET SDK
-        uses: actions/setup-dotnet@v4
-        with:
-          dotnet-version: '8.0.x'
-
-      - name: Restore NuGet packages cache (read-only)
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            Project Files/Source/packages
-            ${{ env.LOCALAPPDATA }}/NuGet/Cache
-          key: ${{ runner.os }}-nuget-${{ hashFiles('Project Files/Source/Console/packages.config') }}
-          restore-keys: |
-            ${{ runner.os }}-nuget-
-
-      - name: Restore build tools cache (read-only)
-        uses: actions/cache/restore@v4
-        with:
-          path: build/tools
-          key: ${{ runner.os }}-build-tools-${{ hashFiles('submodules/vscode/.nvmrc', 'submodules/vscode/package.json') }}
-          restore-keys: |
-            ${{ runner.os }}-build-tools-
-
-      - name: Restore UI node modules cache (read-only)
-        uses: actions/cache/restore@v4
-        with:
-          path: |
-            ui/node_modules
-            build/ui-dependencies.sha256
-          key: ${{ runner.os }}-ui-node-modules-${{ hashFiles('ui/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-ui-node-modules-
-
-      - name: Download compiled binaries from compile stage
-        uses: actions/download-artifact@v4
-        with:
-          name: thetis-staged-release
-
-      - name: Run Thetis.Hosting C# Tests
-        run: |
-          powershell -NoProfile -ExecutionPolicy Bypass -File tests/Thetis.Hosting.Tests/run.ps1
-
-      - name: Run UI Vitest Unit Tests
-        run: |
-          & './build/tools/node-v24.22.1-win-x64/node.exe' ui/scripts/test.mjs unit
-
-      - name: Publish Thetis Release Package
-        uses: actions/upload-artifact@v4
-        with:
-          name: Thetis-Release-x64
-          path: Project Files/bin/x64/Release
-          if-no-files-found: error
