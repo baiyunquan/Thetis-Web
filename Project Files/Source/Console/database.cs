@@ -9548,7 +9548,7 @@ namespace Thetis
             }
             catch (Exception ex)
             {
-                MessageBox.Show("A database write to file operation failed.  " +
+                LegacyMessages.Show("A database write to file operation failed.  " +
                     "The exception error was:\n\n" + ex.Message,
                     "ERROR: Database Write Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, Common.MB_TOPMOST);
@@ -9585,7 +9585,7 @@ namespace Thetis
                 }
                 else //if(rows.Length > 1)	// this should never happen
                 {
-                    MessageBox.Show("Error reading BandInfo table.", "Database Error",
+                    LegacyMessages.Show("Error reading BandInfo table.", "Database Error",
                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                     outStr = "Error";
                     return false;
@@ -9593,7 +9593,7 @@ namespace Thetis
             }
             catch (Exception e)
             {
-                MessageBox.Show(e.Message + "\n\n\n" + e.StackTrace, "Database Error",
+                LegacyMessages.Show(e.Message + "\n\n\n" + e.StackTrace, "Database Error",
                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 outStr = "Error";
                 return false;

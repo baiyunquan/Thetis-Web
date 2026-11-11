@@ -23,6 +23,9 @@ internal static class Program
             , ["Settings.MergePreservesOtherSettings"] = SettingsTests.MergePreservesOtherSettings
             , ["Settings.AtomicWritePreservesSchemaAndPreviousFileOnFailure"] = SettingsTests.AtomicWritePreservesSchemaAndPreviousFileOnFailure
             , ["Settings.LegacyFrequencyUsesInvariantSixDecimals"] = SettingsTests.LegacyFrequencyUsesInvariantSixDecimals
+            , ["Prompts.WaitsForExplicitValidResponse"] = PromptTests.WaitsForExplicitValidResponse
+            , ["Prompts.ShutdownCancelsPendingDecisions"] = PromptTests.ShutdownCancelsPendingDecisions
+            , ["Prompts.CancellationRemovesOnlyItsOwnPrompt"] = PromptTests.CancellationRemovesOnlyItsOwnPrompt
         };
         string selector = args.FirstOrDefault() ?? "All";
         var selected = cases.Where(x => selector == "All" || x.Key.IndexOf(selector, StringComparison.OrdinalIgnoreCase) >= 0).ToArray();

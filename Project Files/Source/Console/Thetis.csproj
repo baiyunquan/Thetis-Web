@@ -832,6 +832,8 @@
     <Compile Include="RadioServices\RadioApplication.cs" />
     <Compile Include="RadioServices\RadioCommandDispatcher.cs" />
     <Compile Include="RadioServices\LegacySettingsStore.cs" />
+    <Compile Include="RadioServices\StartupPromptService.cs" />
+    <Compile Include="FrontendAdapters\LegacyMessages.cs" />
     <Compile Include="titlebar.cs" />
     <Compile Include="TuneStep.cs" />
     <Compile Include="ucOtherButtonsOptionsGrid.cs" />

@@ -177,7 +177,7 @@ namespace Thetis
 
             if (c.PowerOn)
             {
-                DialogResult dr = MessageBox.Show("The Database Manager can not be used whilst the radio is powered on. The radio will be powered off.",
+                DialogResult dr = LegacyMessages.Show("The Database Manager can not be used whilst the radio is powered on. The radio will be powered off.",
                 "Database Manager Issue",
                 MessageBoxButtons.OKCancel,
                 MessageBoxIcon.Information, MessageBoxDefaultButton.Button2, Common.MB_TOPMOST);
@@ -186,7 +186,7 @@ namespace Thetis
                     c.PowerOn = false;
                     if (c.PowerOn)
                     {
-                        MessageBox.Show("Unable to power off the radio. You will need to do it manually and then try again.",
+                        LegacyMessages.Show("Unable to power off the radio. You will need to do it manually and then try again.",
                         "Database Manager Issue",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Information, MessageBoxDefaultButton.Button1, Common.MB_TOPMOST);
@@ -198,7 +198,7 @@ namespace Thetis
 
             if (c.SetupForm.Visible)
             {
-                DialogResult dr = MessageBox.Show("The Database Manager can not be used whilst the Setup window is shown. Please close it and try again.",
+                DialogResult dr = LegacyMessages.Show("The Database Manager can not be used whilst the Setup window is shown. Please close it and try again.",
                 "Database Manager Issue",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Information, MessageBoxDefaultButton.Button1, Common.MB_TOPMOST);
@@ -234,7 +234,7 @@ namespace Thetis
 
             if (!Common.IsValidPath(_db_data_path))
             {
-                DialogResult dr = MessageBox.Show("There is an issue with the database data path.\n\n" +
+                DialogResult dr = LegacyMessages.Show("There is an issue with the database data path.\n\n" +
                 "[" + _db_data_path + "]\n\n" + 
                 "It is not valid. Please fix and try again.",
                 "Database Manager",
@@ -246,7 +246,7 @@ namespace Thetis
             {
                 if (s.StartsWith("-dbfilename:"))
                 {
-                    DialogResult dr = MessageBox.Show("-dbfilename: command line option is no longer supported.\n" +
+                    DialogResult dr = LegacyMessages.Show("-dbfilename: command line option is no longer supported.\n" +
                         "Please use -dbid: to provide the Database Manager with a unique ID to use for this instance.\n" +
                         "You can import your existing database using the Database Manager.",
                         "Database Manager",
@@ -260,7 +260,7 @@ namespace Thetis
                     // check if ok
                     if (!Common.IsValidFilename(_unique_instance_id + "dbman_settings.json"))
                     {
-                        DialogResult dr = MessageBox.Show("There is an issue with the database dbman_settings file name.\n\n" +
+                        DialogResult dr = LegacyMessages.Show("There is an issue with the database dbman_settings file name.\n\n" +
                         "[" + _unique_instance_id + "dbman_settings.json" + "]\n\n" +
                         "It is not valid. Please fix and try again.",
                         "Database Manager",
@@ -278,7 +278,7 @@ namespace Thetis
                 Thread.Sleep(500); // ensure this is intentional
                 if (Keyboard.IsKeyDown(Keys.LShiftKey) || Keyboard.IsKeyDown(Keys.RShiftKey))
                 {
-                    DialogResult dr = MessageBox.Show(
+                    DialogResult dr = LegacyMessages.Show(
                          "The database reset function has been triggered. Would you like to use a fresh new database?\n\n" +
                          "Your existing database will be untouched, and a new one will be used.\n\n" +
                          "It will have the description 'Default' in the Database Manager.",
@@ -297,7 +297,7 @@ namespace Thetis
                 Thread.Sleep(500); // ensure this is intentional
                 if (Keyboard.IsKeyDown(Keys.LControlKey) || Keyboard.IsKeyDown(Keys.RControlKey) || updateFile)
                 {
-                    DialogResult dr = MessageBox.Show(
+                    DialogResult dr = LegacyMessages.Show(
                          "The database force update has been triggered. Do you want to do this?\n\n",                         
                          "Force Update Database?",
                          MessageBoxButtons.YesNo, MessageBoxIcon.Question, MessageBoxDefaultButton.Button2, Common.MB_TOPMOST);
@@ -335,7 +335,7 @@ namespace Thetis
                     string db_xml_file = _db_data_path + _dbman_settings.ActiveDB_GUID.ToString() + "\\database.xml";
                     if (!File.Exists(db_xml_file))
                     {
-                        DialogResult dr = MessageBox.Show("The last active Database could not be located. Using a blank new one.",
+                        DialogResult dr = LegacyMessages.Show("The last active Database could not be located. Using a blank new one.",
                         "Database Manager Issue",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, Common.MB_TOPMOST);
@@ -476,7 +476,7 @@ namespace Thetis
 
             string force_info = force_upgrade ? "Force database update requested.\n\n" : "";
             
-            DialogResult dr = MessageBox.Show(force_info + "This version [" + Common.GetVerNum() + "] of Thetis requires your database [" + version + "] to be updated.\n\n" +
+            DialogResult dr = LegacyMessages.Show(force_info + "This version [" + Common.GetVerNum() + "] of Thetis requires your database [" + version + "] to be updated.\n\n" +
                 "A new updated database will be created, and your old database merged into it. It will be made active.",
                 "Database Manager",
                 MessageBoxButtons.OK,
@@ -509,14 +509,14 @@ namespace Thetis
 
                 if(force_upgrade_via_file) renameUpdatedb();
 
-                dr = MessageBox.Show("The database update was completed sucessfully.",
+                dr = LegacyMessages.Show("The database update was completed sucessfully.",
                     "Database Manager",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Information, MessageBoxDefaultButton.Button1, Common.MB_TOPMOST);
             }
             else
             {
-                dr = MessageBox.Show("The database update did not complete.",
+                dr = LegacyMessages.Show("The database update did not complete.",
                     "Database Manager",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, Common.MB_TOPMOST);
@@ -963,7 +963,7 @@ namespace Thetis
 
         public static void MakeActiveDB(Guid guid)
         {
-            DialogResult dr = MessageBox.Show("Do you want to activate the selected database? This will cause Thetis to restart.",
+            DialogResult dr = LegacyMessages.Show("Do you want to activate the selected database? This will cause Thetis to restart.",
             "Database Manager Issue",
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Question, MessageBoxDefaultButton.Button2, Common.MB_TOPMOST);
@@ -982,7 +982,7 @@ namespace Thetis
                 }
                 else
                 {
-                    dr = MessageBox.Show("There was an issue making the database active.",
+                    dr = LegacyMessages.Show("There was an issue making the database active.",
                     "Database Manager Issue",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, Common.MB_TOPMOST);
@@ -1054,7 +1054,7 @@ namespace Thetis
             bool key_force = Common.ShiftKeyDown;// && Common.CtrlKeyDown;
             if (key_force)
             {
-                DialogResult dr = MessageBox.Show("Force delete detected. Are you sure?",
+                DialogResult dr = LegacyMessages.Show("Force delete detected. Are you sure?",
                 "Database Manager Issue",
                 MessageBoxButtons.YesNo,
                 MessageBoxIcon.Question, MessageBoxDefaultButton.Button2, Common.MB_TOPMOST);
@@ -1107,7 +1107,7 @@ namespace Thetis
             }
             if (!ok)
             {
-                DialogResult dr = MessageBox.Show("There was an issue removing the database.",
+                DialogResult dr = LegacyMessages.Show("There was an issue removing the database.",
                 "Database Manager Issue",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, Common.MB_TOPMOST);
@@ -1159,7 +1159,7 @@ namespace Thetis
 
             if(!ok)
             {
-                DialogResult dr = MessageBox.Show("There was an issue duplicating the database.",
+                DialogResult dr = LegacyMessages.Show("There was an issue duplicating the database.",
                 "Database Manager Issue",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, Common.MB_TOPMOST);
@@ -1356,7 +1356,7 @@ namespace Thetis
             if(file_paths.Count < 1) return;
 
             string msg = file_paths.Count == 1 ? "Do you want to remove this backup?" : $"Do you want to remove these {file_paths.Count} backups?";
-            DialogResult dr = MessageBox.Show(msg,
+            DialogResult dr = LegacyMessages.Show(msg,
             "Remove Backup",
             MessageBoxButtons.YesNo,
             MessageBoxIcon.Question, MessageBoxDefaultButton.Button2, Common.MB_TOPMOST);
@@ -1418,7 +1418,7 @@ namespace Thetis
                         catch { }
                         if (ok)
                         {
-                            DialogResult dr = MessageBox.Show("The database was imported sucessfully. Thetis will now restart.",
+                            DialogResult dr = LegacyMessages.Show("The database was imported sucessfully. Thetis will now restart.",
                             "Database Manager",
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Information, MessageBoxDefaultButton.Button1, Common.MB_TOPMOST);
@@ -1430,7 +1430,7 @@ namespace Thetis
                         }
                         else
                         {
-                            DialogResult dr = MessageBox.Show("There was a problem importing the database. The database file seems to be corrupt.",
+                            DialogResult dr = LegacyMessages.Show("There was a problem importing the database. The database file seems to be corrupt.",
                             "Database Manager",
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, Common.MB_TOPMOST);
@@ -1438,7 +1438,7 @@ namespace Thetis
                     }
                     else
                     {
-                        DialogResult dr = MessageBox.Show("There was a problem importing the database. The xml file seems to be corrupt.",
+                        DialogResult dr = LegacyMessages.Show("There was a problem importing the database. The xml file seems to be corrupt.",
                         "Database Manager",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, Common.MB_TOPMOST);
@@ -1446,7 +1446,7 @@ namespace Thetis
                 }
                 else
                 {
-                    DialogResult dr = MessageBox.Show("The database file needs a .xml file extension.",
+                    DialogResult dr = LegacyMessages.Show("The database file needs a .xml file extension.",
                     "Database Manager",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, Common.MB_TOPMOST);
@@ -1573,7 +1573,7 @@ namespace Thetis
                                     catch (Exception)
                                     {
                                         ok = false;
-                                        DialogResult dr = MessageBox.Show("There was a problem writing the database info. Unable to copy the source database file.",
+                                        DialogResult dr = LegacyMessages.Show("There was a problem writing the database info. Unable to copy the source database file.",
                                         "Database Manager",
                                         MessageBoxButtons.OK,
                                         MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, Common.MB_TOPMOST);
@@ -1586,7 +1586,7 @@ namespace Thetis
                                 }
                                 else
                                 {
-                                    DialogResult dr = MessageBox.Show("There was a problem importing the database. Unable to copy the source database file.",
+                                    DialogResult dr = LegacyMessages.Show("There was a problem importing the database. Unable to copy the source database file.",
                                     "Database Manager",
                                     MessageBoxButtons.OK,
                                     MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, Common.MB_TOPMOST);
@@ -1594,7 +1594,7 @@ namespace Thetis
                             }
                             else
                             {
-                                DialogResult dr = MessageBox.Show("There was a problem importing the database.",
+                                DialogResult dr = LegacyMessages.Show("There was a problem importing the database.",
                                 "Database Manager",
                                 MessageBoxButtons.OK,
                                 MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, Common.MB_TOPMOST);
@@ -1602,7 +1602,7 @@ namespace Thetis
                         }
                         else
                         {
-                            DialogResult dr = MessageBox.Show("There was a problem importing the database. The database file seems to be corrupt.",
+                            DialogResult dr = LegacyMessages.Show("There was a problem importing the database. The database file seems to be corrupt.",
                             "Database Manager",
                             MessageBoxButtons.OK,
                             MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, Common.MB_TOPMOST);
@@ -1610,7 +1610,7 @@ namespace Thetis
                     }
                     else
                     {
-                        DialogResult dr = MessageBox.Show("There was a problem importing the database. The xml file seems to be corrupt.",
+                        DialogResult dr = LegacyMessages.Show("There was a problem importing the database. The xml file seems to be corrupt.",
                         "Database Manager",
                         MessageBoxButtons.OK,
                         MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, Common.MB_TOPMOST);
@@ -1618,7 +1618,7 @@ namespace Thetis
                 }
                 else
                 {
-                    DialogResult dr = MessageBox.Show("The database file needs a .xml file extension.",
+                    DialogResult dr = LegacyMessages.Show("The database file needs a .xml file extension.",
                     "Database Manager",
                     MessageBoxButtons.OK,
                     MessageBoxIcon.Error, MessageBoxDefaultButton.Button1, Common.MB_TOPMOST);
