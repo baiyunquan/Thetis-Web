@@ -44,16 +44,18 @@ class Program
             Expect(Response(host, "/code/%2e%2e/private.txt"), "403 Forbidden");
             Expect(Response(host, "/code/index.html::$DATA"), "403 Forbidden");
             Expect(Response(host, "/code/", "evil.example:50001"), "403 Forbidden");
-            Expect(Response(host, "/code/", "localhost:50001", "192.168.1.2"), "403 Forbidden");
+            Expect(Response(host, "/code/", "localhost:50001", "192.169.1.2"), "403 Forbidden");
             Expect(Response(host, "/code/", "192.168.0.29:50001", "192.168.0.8"), "Location: https://thetis.home.arpa:50001/code/");
             Expect(Response(host, "/code/", "thetis.home.arpa:50001", "192.168.0.8", true), "packaged-code");
+            Expect(Response(host, "/code/", "thetis.home.arpa:50001", "192.168.3.165", true), "packaged-code");
+            Expect(Response(host, "/code/", "thetis.home.arpa:50001", "192.168.114.100", true), "packaged-code");
             Expect(Response(host, "/code/", "localhost:50001", "127.0.0.1", true), "403 Forbidden");
             string head = Response(host, "/code/", method: "HEAD");
             Expect(head, "Content-Length: 13");
             if (head.Contains("packaged-code")) throw new Exception("HEAD leaked response body");
-            foreach (string ip in new[] { "127.0.0.1", "::1", "192.168.0.1", "192.168.0.254", "::ffff:192.168.0.2" })
+            foreach (string ip in new[] { "127.0.0.1", "::1", "192.168.0.0", "192.168.0.1", "192.168.3.165", "192.168.114.100", "192.168.255.255", "::ffff:192.168.114.100" })
                 Check(HostingConfiguration.IsCodePeer(IPAddress.Parse(ip)), "Code peer rejected: " + ip);
-            foreach (string ip in new[] { "10.0.0.1", "192.168.1.1", "192.168.10.1", "2001:db8::1" })
+            foreach (string ip in new[] { "10.0.0.1", "192.167.255.255", "192.169.0.0", "::ffff:192.169.0.1", "2001:db8::1" })
                 Check(!HostingConfiguration.IsCodePeer(IPAddress.Parse(ip)), "Code peer accepted: " + ip);
             Check(config.IsAllowedHost(new string('a', 52) + ".localhost", false), "hashed localhost rejected");
             Check(config.IsAllowedHost("v--0m8b9nohqg40ofbl1bips6o0pfe1l81siob3tceg1g3utpesh6c8.localhost", false), "pinned Code extension-host v-- origin rejected");

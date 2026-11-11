@@ -1,5 +1,7 @@
 # Embedded Code host LAN setup
 
+Current network scope, updated 2026-11-12: loopback and `192.168.0.0/16`. This includes the Tailscale-routed lab (`192.168.3.0/24`) and workspace (`192.168.114.0/24`); the lab gateway/DNS is `192.168.3.1`. The host and optional firewall helper use the same `/16`. Existing TLS behavior is unchanged. The user stopped further TLS/DNS sign-off work; the certificate/DNS procedure below is retained as an optional reference.
+
 The [Windows PowerShell 5.1 helper](D:/workspace/Thetis/ui/setup-code-host.ps1) prepares certificates for `thetis.home.arpa` and `*.thetis.home.arpa`, then writes `%LOCALAPPDATA%\Thetis\CodeHost\hosting.json` containing `baseHost` and `certificateThumbprint`. The C# embedded server remains the only runtime host on TCP 50001. Build-time Node tools do not serve the application.
 
 Start with its read-only JSON plan. Explicitly supplying an address avoids selecting the wrong NIC when several routable interfaces exist.
@@ -29,7 +31,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File ui/setup-code-host.ps1 -Conf
 
 `-InstallTrust` imports the public CA into the current user's Root store only. Other clients each need an explicit trust installation through their OS/browser/device workflow. Transfer only the public CA certificate and verify its fingerprint through a trusted channel. The helper never installs trust silently on other devices.
 
-`-ConfigureFirewall` requires elevation and the actual [Release executable](D:/workspace/Thetis/Project%20Files/bin/x64/Release/Thetis.exe), or an explicit `-ExecutablePath`. It creates/updates only the named Thetis CodeHost rule, with the executable program path, inbound TCP local port 50001, Private profile and `RemoteAddress 192.168.0.0/24`. It does not broaden the allowed subnet to match the current NIC. A server outside that subnet requires verified routing; a rule alone proves no connectivity. `-PlanOnly -InstallTrust -ConfigureFirewall` describes both intentions without applying them or creating certificates/files.
+`-ConfigureFirewall` requires elevation and the actual [Release executable](D:/workspace/Thetis/Project%20Files/bin/x64/Release/Thetis.exe), or an explicit `-ExecutablePath`. It creates/updates only the named Thetis CodeHost rule, with the executable program path, inbound TCP local port 50001, Private profile and `RemoteAddress 192.168.0.0/16`. Its existing rule identity is preserved so an explicit rerun updates a previously created `/24` rule. A rule alone proves no connectivity. `-PlanOnly -InstallTrust -ConfigureFirewall` describes both intentions without applying them or creating certificates/files.
 
 Configure the LAN DNS resolver with both A records, replacing the example server address:
 
@@ -63,9 +65,9 @@ The lab now contains:
 
 The [audit](D:/workspace/Thetis/docs/ui-parity/evidence/2026-11-12-deployment-audit.json) records package/assets, key policies and cleanup. A separate [strict TLS/WSS result](D:/workspace/Thetis/docs/ui-parity/evidence/2026-11-12-remote-tls-transport.json) verifies TLS 1.2, base/webview/extension-host certificate names, rejection of an unrelated hostname and a diagnostic echo. It used SSH forwarding to remote loopback with explicit CA-chain and hostname validation. It does not prove real DNS, browser trust or allowed-subnet reachability. The demo process and tunnel started for that check were stopped; configuration/certificates remain ready for the next run.
 
-Secure LAN acceptance still needs the actual DNS server/router and a test client on `192.168.0.0/24`. The lab has only `192.168.3.165/24` and loopback; the workspace host has `192.168.114.100`. Do not infer allowed-subnet access from the server's address or the SSH tunnel.
+The user subsequently clarified that the lab gateway/DNS is `192.168.3.1` and the `192.168.3.0/24` and `192.168.114.0/24` networks are connected through Tailscale. Both now fall within the requested `192.168.0.0/16` allowance. The earlier requirement for a separate `/24` test client is superseded.
 
-Once those connection details are available:
+For a future explicit TLS/DNS qualification run:
 
 1. Publish `thetis.home.arpa A 192.168.3.165` and `*.thetis.home.arpa A 192.168.3.165` on the client-used local DNS server. Verify base and actual generated wildcard names from that client.
 2. Install only the verified public CA through that client's OS/browser trust workflow. Keep private keys on the lab host. Confirm hostname/chain validation succeeds without certificate-error overrides.
@@ -73,4 +75,4 @@ Once those connection details are available:
 4. Start the lab's `Thetis.exe -code-demo` under `HAM\radiolab`. An SSH-launched background process can terminate with its SSH session; keep that session open for the test or use the intended user's launch workflow. Do not run an additional production web server.
 5. Run the [browser suite](D:/workspace/Thetis/ui/playwright.config.ts) from the allowed client with `THETIS_BASE_URL=https://thetis.home.arpa:50001`. Retain secure-context, extension activation, scripted-view, service-worker, WSS echo, browser/network logs and build identities. Certificate checks remain enabled. Record real client/source addresses separately from server addresses.
 
-The user retained secure LAN acceptance as mandatory on 2026-11-12. Keep the [Stage 1 sign-off](D:/workspace/Thetis/docs/superpowers/plans/2026-11-08-code-oss-ui-step-01-foundation.md) pending until that browser evidence is present.
+The later user instruction on 2026-11-12 stopped this TLS/DNS qualification work. These optional steps must not be reintroduced as a blocker for [Stage 1](D:/workspace/Thetis/docs/superpowers/plans/2026-11-08-code-oss-ui-step-01-foundation.md).

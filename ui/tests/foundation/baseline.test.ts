@@ -80,7 +80,8 @@ describe.skipIf(process.platform !== 'win32')('Windows LAN setup helper', () => 
     ]);
     expect(plan.installTrust).toBe(false);
     expect(plan.configureFirewall).toBe(false);
-    expect(plan.firewall.remoteAddress).toBe('192.168.0.0/24');
-    expect(plan.scopeNotice).toMatch(/outside.*192\.168\.0\.0\/24/);
+    expect(plan.firewall.remoteAddress).toBe('192.168.0.0/16');
+    expect(plan.scopeNotice).toMatch(/192\.168\.0\.0\/16/);
+    expect(plan.scopeNotice).not.toMatch(/outside/);
   });
 });

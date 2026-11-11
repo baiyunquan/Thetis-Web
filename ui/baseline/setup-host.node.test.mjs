@@ -20,8 +20,9 @@ test('PlanOnly emits DNS, explicit trust/firewall intentions and creates no file
     assert.equal(plan.dnsRecords[1].name, '*.thetis.home.arpa');
     assert.equal(plan.installTrust, false);
     assert.equal(plan.configureFirewall, false);
-    assert.equal(plan.firewall.remoteAddress, '192.168.0.0/24');
-    assert.match(plan.scopeNotice, /outside.*192\.168\.0\.0\/24/);
+    assert.equal(plan.firewall.remoteAddress, '192.168.0.0/16');
+    assert.match(plan.scopeNotice, /192\.168\.0\.0\/16/);
+    assert.doesNotMatch(plan.scopeNotice, /outside/);
     assert.equal(existsSync(join(localAppData, 'Thetis')), false);
   } finally { rmSync(localAppData, { recursive: true, force: true }); }
 });
@@ -44,6 +45,20 @@ test('a loopback DNS target is rejected instead of promising LAN access', () => 
     const result = run(['-PlanOnly', '-ServerAddress', '127.0.0.1'], localAppData);
     assert.notEqual(result.status, 0);
     assert.match(result.stderr, /routable IPv4/);
+    assert.equal(existsSync(join(localAppData, 'Thetis')), false);
+  } finally { rmSync(localAppData, { recursive: true, force: true }); }
+});
+
+test('the lab subnet is inside the /16 and an adjacent network remains outside', () => {
+  const localAppData = mkdtempSync(join(tmpdir(), 'thetis-plan-subnets-'));
+  try {
+    for (const [address, outside] of [['192.168.3.165', false], ['192.169.0.10', true]]) {
+      const result = run(['-PlanOnly', '-ServerAddress', address], localAppData);
+      assert.equal(result.status, 0, result.stderr || result.stdout);
+      const plan = JSON.parse(result.stdout);
+      assert.equal(plan.firewall.remoteAddress, '192.168.0.0/16');
+      assert.equal(plan.scopeNotice.includes('outside'), outside);
+    }
     assert.equal(existsSync(join(localAppData, 'Thetis')), false);
   } finally { rmSync(localAppData, { recursive: true, force: true }); }
 });

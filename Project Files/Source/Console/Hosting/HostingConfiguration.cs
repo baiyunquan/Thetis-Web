@@ -96,7 +96,7 @@ namespace Thetis.Hosting
             if (address.IsIPv4MappedToIPv6) address = address.MapToIPv4();
             if (IPAddress.IsLoopback(address)) return true;
             byte[] bytes = address.GetAddressBytes();
-            return bytes.Length == 4 && bytes[0] == 192 && bytes[1] == 168 && bytes[2] == 0;
+            return bytes.Length == 4 && bytes[0] == 192 && bytes[1] == 168;
         }
 
         public bool IsAllowedHost(string host, bool tls)

@@ -136,9 +136,9 @@ $configurationDirectory = Join-Path $env:LOCALAPPDATA 'Thetis\CodeHost'
 $configurationPath = Join-Path $configurationDirectory 'hosting.json'
 $publicRootPath = Join-Path $configurationDirectory 'thetis-codehost-root-ca.cer'
 $resolvedExecutable = [System.IO.Path]::GetFullPath($ExecutablePath)
-$scopeNotice = 'Firewall opt-in permits only Private-profile clients in 192.168.0.0/24; DNS/trust and a real client connection must be qualified independently.'
-if ($addressPlan.address -and !$addressPlan.address.StartsWith('192.168.0.')) {
-    $scopeNotice = "Selected server address $($addressPlan.address) is outside 192.168.0.0/24; this helper does not promise reachability from that subnet. Routing and client access require separate verification."
+$scopeNotice = 'Firewall opt-in permits only Private-profile clients in 192.168.0.0/16; DNS/trust and a real client connection must be qualified independently.'
+if ($addressPlan.address -and !$addressPlan.address.StartsWith('192.168.')) {
+    $scopeNotice = "Selected server address $($addressPlan.address) is outside 192.168.0.0/16; this helper does not promise reachability from that subnet. Routing and client access require separate verification."
 }
 $plan = [ordered]@{
     planOnly = [bool]$PlanOnly
@@ -155,7 +155,7 @@ $plan = [ordered]@{
     installTrust = [bool]$InstallTrust
     trustStore = 'Cert:\CurrentUser\Root'
     configureFirewall = [bool]$ConfigureFirewall
-    firewall = @{ name = 'Thetis-CodeHost-50001-Private-1921680'; protocol = 'TCP'; localPort = 50001; remoteAddress = '192.168.0.0/24'; profile = 'Private'; program = $resolvedExecutable }
+    firewall = @{ name = 'Thetis-CodeHost-50001-Private-1921680'; protocol = 'TCP'; localPort = 50001; remoteAddress = '192.168.0.0/16'; profile = 'Private'; program = $resolvedExecutable }
     scopeNotice = $scopeNotice
     clients = 'All browser/device clients; no User-Agent filtering. Each client needs both DNS names resolved and explicit CA trust.'
     unresolvedDnsInstruction = 'If serverAddress is null, select a routable server NIC address and rerun with -ServerAddress. Configure both DNS A records to that chosen address; never publish loopback or 0.0.0.0.'
@@ -200,9 +200,9 @@ try {
 
 if ($InstallTrust) { Import-Certificate -FilePath $publicRootPath -CertStoreLocation 'Cert:\CurrentUser\Root' | Out-Null }
 if ($ConfigureFirewall) {
-    $ruleParameters = @{ Name = $plan.firewall.name; Direction = 'Inbound'; Action = 'Allow'; Enabled = 'True'; Profile = 'Private'; Protocol = 'TCP'; LocalPort = 50001; RemoteAddress = '192.168.0.0/24'; Program = $resolvedExecutable }
+    $ruleParameters = @{ Name = $plan.firewall.name; Direction = 'Inbound'; Action = 'Allow'; Enabled = 'True'; Profile = 'Private'; Protocol = 'TCP'; LocalPort = 50001; RemoteAddress = '192.168.0.0/16'; Program = $resolvedExecutable }
     if (Get-NetFirewallRule -Name $plan.firewall.name -ErrorAction SilentlyContinue) { Set-NetFirewallRule @ruleParameters | Out-Null }
-    else { New-NetFirewallRule @ruleParameters -DisplayName 'Thetis CodeHost TCP 50001 (192.168.0.0/24 only)' | Out-Null }
+    else { New-NetFirewallRule @ruleParameters -DisplayName 'Thetis CodeHost TCP 50001 (192.168.0.0/16 only)' | Out-Null }
 }
 
 Write-Host "Hosting configuration: $configurationPath"
