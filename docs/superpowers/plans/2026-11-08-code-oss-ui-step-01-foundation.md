@@ -1,6 +1,6 @@
 # Step 01: Thetis Code OSS Foundation
 
-Status, 2026-11-09: implementation is present; 42 packaged browser tests, 46 unit tests, strict TypeScript and the Release pipeline pass. Trusted cross-machine acceptance on `192.168.0.0/24` and complete normal WinForms/legacy TCI acceptance remain unqualified. This is Stage 1 of the [ten-stage roadmap](D:/workspace/Thetis/docs/superpowers/plans/2026-11-08-code-oss-ui-reconstruction.md), with qualification included here.
+Status reviewed 2026-11-12: implementation is present; the recorded local results include 42 packaged browser tests, 46 unit tests, strict TypeScript and the Release pipeline. Supplied remote evidence qualifies visible WinForms startup and legacy TCI read queries. The deployed lab also passes strict TLS/WSS transport checks, but actual wildcard-DNS/browser acceptance from `192.168.0.0/24` remains required, as confirmed by the user on 2026-11-12. Stage 1 sign-off is pending that network acceptance. This is Stage 1 of the [ten-stage roadmap](D:/workspace/Thetis/docs/superpowers/plans/2026-11-08-code-oss-ui-reconstruction.md), with qualification included here.
 
 ## Scope and architecture
 
@@ -56,7 +56,8 @@ The old WebUI submodule remains in the repository. The user's explicit follow-up
 - [x] Admit Code peers from loopback and `192.168.0.0/24`; apply no browser/device identity filter. Retain the separate legacy TCI access policy and plain upgrade path.
 - [x] Supply a [setup helper](D:/workspace/Thetis/ui/setup-code-host.ps1) for a local CA and non-exportable server key, certificate thumbprint configuration, public CA export, wildcard/base DNS instructions and an optional application-scoped TCP 50001 firewall rule.
 - [x] Exercise real plain TCP/TLS 1.2 and diagnostic framing using the [net48 harness](D:/workspace/Thetis/tests/Thetis.Hosting.Tests/Program.cs). Exercise actual isolated CA/leaf creation and reuse without installing trust/firewall rules.
-- [ ] Configure and qualify trusted cross-machine DNS, HTTPS, webview/extension origins and WSS on the requested subnet. This workstation's observed address is outside that subnet; local harnesses do not substitute for remote acceptance.
+- [x] Prepare the deployed lab's local CA, non-exportable server key, thumbprint configuration and public-only export. Verify deployed TLS 1.2, base/wildcard certificate validation and a diagnostic WSS echo through an explicitly scoped SSH-loopback transport test. [Audit](D:/workspace/Thetis/docs/ui-parity/evidence/2026-11-12-deployment-audit.json).
+- [ ] Configure and qualify actual cross-machine DNS, client CA trust, HTTPS, webview/extension origins and WSS from the requested subnet. DNS-server and allowed-subnet client connection details are required. An SSH-loopback test does not satisfy this acceptance.
 
 Defaults: `https://thetis.home.arpa:50001/code/`, `https://<hash>.thetis.home.arpa:50001/...`, and `https://v--<hash>.thetis.home.arpa:50001/...`. See the [LAN procedure](D:/workspace/Thetis/docs/ui-parity/lan-setup.md).
 
@@ -97,8 +98,9 @@ Legacy XML/PNG import, eight-state imagery and skin install/remove workflows rem
 - [x] Automate clean/upgrade staging, framing/failure/lifecycle checks and zero-test-selector rejection.
 - [x] Finish the local packaged browser matrix (42/42) and headed Edge smoke test, then publish measured results and copied-profile attempt limits in the qualification record.
 - [x] Reproduce and fix the WinForms resource-reader binding mismatch; add an isolated deployed-resource probe without constructing Forms or radio services.
-- [x] Complete visible normal WinForms startup and an actual legacy TCI handshake/read query from a copied profile. Resource loading and native DLL presence alone do not qualify this compatibility dimension. (Qualified on remote host 192.168.3.165 in Session 2; TCI query/response sequence verified on port 50005 with ANAN100D radio state; evidence in [remote-acceptance.json](file:///d:/workspace/Thetis/build/foundation-evidence/remote-acceptance.json)).
-- [x] Add actual remote-machine acceptance before marking Stage 1 complete. Preserve open WinForms/radio/device evidence explicitly. (Remote deployment to radiolab@192.168.3.165:D:\ThetisDevelopment verified for both -code-demo LAN access and interactive WinForms startup; evidence in [remote-acceptance.json](file:///d:/workspace/Thetis/build/foundation-evidence/remote-acceptance.json)).
+- [x] Preserve supplied visible normal WinForms startup and legacy TCI handshake/read-query evidence from a copied profile: remote Session 2, port 50005, ANAN100D state, production profile unchanged. [Archived original record](D:/workspace/Thetis/docs/ui-parity/evidence/2026-11-09-remote-acceptance.json).
+- [x] Independently verify the deployed package identity and frontend asset hashes; retain the distinct local/remote build identities and the strict TLS/WSS transport result. Preserve unavailable Windows picture and radio/device evidence explicitly.
+- [ ] Complete the actual secure LAN browser acceptance before marking Stage 1 complete. The original remote HTTP/WS record and a later tunneled TLS check are separate evidence scopes.
 
 Every completed operation receives its targeted checks, the required Release pipeline for code/configuration/assets, and a coherent Git commit.
 

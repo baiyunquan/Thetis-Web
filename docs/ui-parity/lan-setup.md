@@ -49,3 +49,28 @@ The separate [certificate integration check](D:/workspace/Thetis/ui/baseline/tes
 ```powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File ui/baseline/test-setup-certificates.ps1
 ```
+
+## Lab preparation reviewed 2026-11-12
+
+The supplied [remote acceptance record](D:/workspace/Thetis/docs/ui-parity/evidence/2026-11-09-remote-acceptance.json) identifies the lab as `radiolab@192.168.3.165`, deployment `D:\ThetisDevelopment`. Its package SHA256 was independently matched. The maintained helper was copied to `D:\ThetisDevelopment\setup-code-host-stage1.ps1` and run under `HAM\radiolab` with that executable/address, without the trust or firewall switches.
+
+The lab now contains:
+
+- Configuration: `C:\Users\radiolab\AppData\Local\Thetis\CodeHost\hosting.json`.
+- Server certificate in CurrentUser/My: thumbprint `44413CFB13C30CEAB38871DB811D19825B6E9CBB`, covering `thetis.home.arpa` and `*.thetis.home.arpa`.
+- Public CA export: `C:\Users\radiolab\AppData\Local\Thetis\CodeHost\thetis-codehost-root-ca.cer`; SHA256 `B37C095C2806371F02134DB75438F57611DBCEF5368AD7572FCDB3374D4A837C`. A public-only copy is available in the workspace's `build/foundation-evidence/secure-lan/remote-codehost-root-ca.cer`.
+- Non-exportable CA and server keys, independently checked; no Root-store installation, DNS edit, firewall change or subnet expansion.
+
+The [audit](D:/workspace/Thetis/docs/ui-parity/evidence/2026-11-12-deployment-audit.json) records package/assets, key policies and cleanup. A separate [strict TLS/WSS result](D:/workspace/Thetis/docs/ui-parity/evidence/2026-11-12-remote-tls-transport.json) verifies TLS 1.2, base/webview/extension-host certificate names, rejection of an unrelated hostname and a diagnostic echo. It used SSH forwarding to remote loopback with explicit CA-chain and hostname validation. It does not prove real DNS, browser trust or allowed-subnet reachability. The demo process and tunnel started for that check were stopped; configuration/certificates remain ready for the next run.
+
+Secure LAN acceptance still needs the actual DNS server/router and a test client on `192.168.0.0/24`. The lab has only `192.168.3.165/24` and loopback; the workspace host has `192.168.114.100`. Do not infer allowed-subnet access from the server's address or the SSH tunnel.
+
+Once those connection details are available:
+
+1. Publish `thetis.home.arpa A 192.168.3.165` and `*.thetis.home.arpa A 192.168.3.165` on the client-used local DNS server. Verify base and actual generated wildcard names from that client.
+2. Install only the verified public CA through that client's OS/browser trust workflow. Keep private keys on the lab host. Confirm hostname/chain validation succeeds without certificate-error overrides.
+3. Verify routing from the allowed client subnet and apply/check the executable-scoped Private-profile TCP 50001 firewall rule with the actual deployed executable path.
+4. Start the lab's `Thetis.exe -code-demo` under `HAM\radiolab`. An SSH-launched background process can terminate with its SSH session; keep that session open for the test or use the intended user's launch workflow. Do not run an additional production web server.
+5. Run the [browser suite](D:/workspace/Thetis/ui/playwright.config.ts) from the allowed client with `THETIS_BASE_URL=https://thetis.home.arpa:50001`. Retain secure-context, extension activation, scripted-view, service-worker, WSS echo, browser/network logs and build identities. Certificate checks remain enabled. Record real client/source addresses separately from server addresses.
+
+The user retained secure LAN acceptance as mandatory on 2026-11-12. Keep the [Stage 1 sign-off](D:/workspace/Thetis/docs/superpowers/plans/2026-11-08-code-oss-ui-step-01-foundation.md) pending until that browser evidence is present.

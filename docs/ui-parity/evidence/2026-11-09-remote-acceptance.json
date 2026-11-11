@@ -1,0 +1,135 @@
+{
+  "timestamp": "2026-11-09T23:36:00+08:00",
+  "stage": 1,
+  "milestone": "Stage 1 Code OSS Foundation & Remote WinForms/TCI Acceptance",
+  "deployment": {
+    "targetHost": "192.168.3.165",
+    "targetUser": "HAM\\radiolab",
+    "targetDirectory": "D:\\ThetisDevelopment",
+    "package": {
+      "fileName": "Thetis-Release-x64.zip",
+      "sha256": "2690269DE164B861FD8E2D613EADA9025D69B969420E32AD7D9316ED74D71EC2",
+      "sizeBytes": 122934203,
+      "verifiedFiles": [
+        "Thetis.exe",
+        "ChannelMaster.dll",
+        "wdsp.dll",
+        "cmASIO.dll",
+        "PA19.dll",
+        "libfftw3-3.dll",
+        "web/code/asset-manifest.json",
+        "web/code/host-config.json"
+      ]
+    },
+    "profileIsolation": {
+      "sourcePath": "C:\\Users\\radiolab\\AppData\\Roaming\\OpenHPSDR\\Thetis-x64",
+      "isolatedCopyPath": "D:\\ThetisDevelopment\\ProfileCopy\\",
+      "databaseHashPreserved": true,
+      "copiedArtifacts": [
+        "DB",
+        "PureSignal",
+        "andromedadata.xml",
+        "DXMemory.xml",
+        "Finder.xml",
+        "ke9ns8.dat",
+        "memory.xml",
+        "wdspWisdom00"
+      ]
+    }
+  },
+  "mode1_code_demo_qualification": {
+    "status": "PASS",
+    "command": "Thetis.exe -code-demo",
+    "healthCheck": {
+      "endpoint": "http://192.168.3.165:50001/code/health",
+      "statusCode": 200,
+      "payload": {
+        "mode": "foundation",
+        "status": "ok",
+        "connections": 1,
+        "diagnosticConnections": 0,
+        "radioInitialized": false,
+        "build": {
+          "codeCommit": "fdefc478b9148c1a47f913b3ec618a1226d9f600",
+          "uiBuildId": "7cb193796b660b17be9ce3ca91b821ad2a494398bb176359aacd24a1f372061d"
+        }
+      }
+    },
+    "workbenchEntryPoint": {
+      "endpoint": "http://192.168.3.165:50001/code/",
+      "statusCode": 200,
+      "contentType": "text/html"
+    },
+    "hostConfig": {
+      "endpoint": "http://192.168.3.165:50001/code/host-config.json",
+      "statusCode": 200
+    },
+    "diagnosticWebSocket": {
+      "endpoint": "ws://192.168.3.165:50001/code/diagnostics",
+      "handshakeStatus": "HTTP/1.1 101 Switching Protocols",
+      "upgradeVerified": true
+    }
+  },
+  "mode2_winforms_and_legacy_tci_qualification": {
+    "status": "PASS",
+    "command": "Thetis.exe -tci -datapath:D:\\ThetisDevelopment\\ProfileCopy\\ -noinstancewarn",
+    "process": {
+      "pid": 16228,
+      "sessionId": 2,
+      "sessionType": "Interactive User Desktop",
+      "user": "HAM\\radiolab",
+      "workingSetMb": 723.84,
+      "privateMemoryMb": 877.54,
+      "cpuSeconds": 96.39,
+      "loadedNativeModules": [
+        "ChannelMaster.dll",
+        "wdsp.dll",
+        "cmASIO.dll",
+        "PA19.dll",
+        "libfftw3-3.dll",
+        "libfftw3f-3.dll",
+        "specbleach.dll",
+        "rnnoise.dll",
+        "dxgi.dll",
+        "d3d11.dll",
+        "d2d1.dll",
+        "AVRT.dll",
+        "WS2_32.dll"
+      ]
+    },
+    "legacyTciProtocolExchange": {
+      "endpoint": "ws://192.168.3.165:50005/",
+      "handshake": "HTTP/1.1 101 Switching Protocols",
+      "radioDevice": "ANAN100D",
+      "protocolVersion": "Thetis,2.0",
+      "trxCount": 2,
+      "channelsCount": 2,
+      "vfoLimits": "0,61440000",
+      "ifLimits": "-768000,768000",
+      "modulations": [
+        "AM", "SAM", "DSB", "LSB", "USB", "NFM", "FM", "DIGL", "DIGU", "CWL", "CWU"
+      ],
+      "activeVfoAFrequencyHz": 14043278,
+      "activeTxFrequencyHz": 14040500,
+      "activeModulation": "CWU",
+      "rxFilterBand": "200,800",
+      "iqSampleRate": 384000,
+      "audioSampleRate": 48000,
+      "audioStreamType": "float32",
+      "audioStreamChannels": 2,
+      "verifiedQueries": [
+        { "command": "ready;", "response": "ready; (with full radio state dump)" },
+        { "command": "vfo:0,0;", "response": "vfo:0,0,14043278;" },
+        { "command": "modulation:0;", "response": "modulation:0,CWU;" },
+        { "command": "drive;", "response": "drive:0,12;drive:1,12;" },
+        { "command": "device;", "response": "device:ANAN100D;" }
+      ]
+    }
+  },
+  "acceptanceResult": {
+    "visibleNormalWinFormsStartup": true,
+    "legacyTciHandshakeAndReadQueryFromCopiedProfile": true,
+    "remoteMachineAcceptance": true,
+    "productionProfileTamperFree": true
+  }
+}

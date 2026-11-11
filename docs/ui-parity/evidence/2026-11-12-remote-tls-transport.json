@@ -1,0 +1,71 @@
+{
+  "reviewDate": "2026-11-12",
+  "transport": "SSH forward 127.0.0.1:55001 to remote loopback:50001",
+  "scope": "Deployed TLS, wildcard certificate and diagnostic framing only; not DNS/browser/subnet acceptance",
+  "certificateValidation": "CERT_REQUIRED; check_hostname=True; supplied public CA; no validation bypass",
+  "rootSha256": "b37c095c2806371f02134db75438f57611dbcef5368ad7572fcdb3374d4a837c",
+  "hosts": [
+    {
+      "name": "thetis.home.arpa",
+      "tls": "TLSv1.2",
+      "health": {
+        "mode": "foundation",
+        "status": "ok",
+        "connections": 1,
+        "diagnosticConnections": 0,
+        "radioInitialized": false,
+        "build": {
+          "codeCommit": "fdefc478b9148c1a47f913b3ec618a1226d9f600",
+          "uiBuildId": "7cb193796b660b17be9ce3ca91b821ad2a494398bb176359aacd24a1f372061d"
+        }
+      }
+    },
+    {
+      "name": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.thetis.home.arpa",
+      "tls": "TLSv1.2",
+      "health": {
+        "mode": "foundation",
+        "status": "ok",
+        "connections": 1,
+        "diagnosticConnections": 0,
+        "radioInitialized": false,
+        "build": {
+          "codeCommit": "fdefc478b9148c1a47f913b3ec618a1226d9f600",
+          "uiBuildId": "7cb193796b660b17be9ce3ca91b821ad2a494398bb176359aacd24a1f372061d"
+        }
+      }
+    },
+    {
+      "name": "v--aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa.thetis.home.arpa",
+      "tls": "TLSv1.2",
+      "health": {
+        "mode": "foundation",
+        "status": "ok",
+        "connections": 1,
+        "diagnosticConnections": 0,
+        "radioInitialized": false,
+        "build": {
+          "codeCommit": "fdefc478b9148c1a47f913b3ec618a1226d9f600",
+          "uiBuildId": "7cb193796b660b17be9ce3ca91b821ad2a494398bb176359aacd24a1f372061d"
+        }
+      }
+    }
+  ],
+  "secureLanQualified": false,
+  "invalidHostnameRejected": true,
+  "wssEcho": {
+    "requestId": "remote-tls-qualification",
+    "value": "strict-ca-and-hostname-echo"
+  },
+  "cleanupHealth": {
+    "mode": "foundation",
+    "status": "ok",
+    "connections": 1,
+    "diagnosticConnections": 0,
+    "radioInitialized": false,
+    "build": {
+      "codeCommit": "fdefc478b9148c1a47f913b3ec618a1226d9f600",
+      "uiBuildId": "7cb193796b660b17be9ce3ca91b821ad2a494398bb176359aacd24a1f372061d"
+    }
+  }
+}

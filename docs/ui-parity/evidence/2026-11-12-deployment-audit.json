@@ -1,0 +1,60 @@
+{
+  "reviewDate": "2026-11-12",
+  "host": "192.168.3.165",
+  "binarySha256": "97B9ECB320C6852802FF7C55A4BF4AE4E86F5A6ECDCE30B844F27DA742B6A405",
+  "packageSha256": "2690269DE164B861FD8E2D613EADA9025D69B969420E32AD7D9316ED74D71EC2",
+  "build": {
+    "version": "1.146.0",
+    "commit": "fdefc478b9148c1a47f913b3ec618a1226d9f600",
+    "uiBuildId": "7cb193796b660b17be9ce3ca91b821ad2a494398bb176359aacd24a1f372061d",
+    "codeFingerprint": "82ddb3c930c8e0b7ad430464f29b2ef53104577da81598f3df485a4f8bfda7ff",
+    "adapters": [
+      "webview-controller-claim-v1"
+    ],
+    "mode": "foundation"
+  },
+  "assets": [
+    {
+      "file": "web\\code\\bootstrap.js",
+      "sha256": "F1C5413A5BC67F7328CE2FF48EB3D9310EF7FBD656AD27B5BA2453F215B6CAB7"
+    },
+    {
+      "file": "web\\code\\extensions\\thetis\\extension.js",
+      "sha256": "7D9F7398D3AB990B2E90BE4661CDD270ED8B74F1BAA3C71E20023129E93843AF"
+    },
+    {
+      "file": "web\\code\\extensions\\thetis\\media\\main.js",
+      "sha256": "8076E8D9E47538BF7180E76FFA5508DB32D779E5826169F544FFCFE5C705D5C8"
+    },
+    {
+      "file": "web\\code\\extensions\\thetis\\media\\main.css",
+      "sha256": "D420FA5C03EA7774B0527AAE500F11AC404B0DCB89D37DDC5A63C94E71DB9828"
+    }
+  ],
+  "pidDuringTlsProbe": 16072,
+  "radioModules": [],
+  "serverThumbprint": "44413CFB13C30CEAB38871DB811D19825B6E9CBB",
+  "rootThumbprint": "868C370617F89389ED521B67F364461AC143611B",
+  "serverKeyExportable": false,
+  "rootTrusted": false,
+  "dnsConfigured": false,
+  "firewallChanged": false,
+  "allowedSubnet": "192.168.0.0/24",
+  "secureLanQualified": false,
+  "rootKeyExportPolicy": "None",
+  "rootKeyNonExportable": true,
+  "rootKeyType": "RSACng",
+  "cleanup": {
+    "certificateConfigurationRetained": true,
+    "ownedDemoProcessStopped": true,
+    "trustInstalled": false,
+    "dnsChanged": false,
+    "remainingThetisProcesses": [],
+    "reviewDate": "2026-11-12",
+    "firewallChanged": false
+  },
+  "publicCaSha256": "b37c095c2806371f02134db75438f57611dbcef5368ad7572fcdb3374d4a837c",
+  "suppliedAcceptanceSha256": "e208e09919b40c928bde5d6cf4374e7ae17b2d695fb158e5cb7f54bef3ce5e9a",
+  "localComparisonUiBuildId": "cac645333037c6a7841aa768524c934cd090fbe7559e36b3a4d32a4f5afa7d34",
+  "frontendAssetsMatchLocalQualification": true
+}

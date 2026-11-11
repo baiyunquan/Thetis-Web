@@ -1,10 +1,12 @@
 # Foundation qualification record
 
-Stage 1 implementation passes local packaged browser qualification on 2026-11-09: 42/42 tests across Edge, Firefox and WebKit, plus a headed Edge smoke test. Trusted cross-machine acceptance on `192.168.0.0/24` and complete normal WinForms/legacy TCI acceptance remain open. This record distinguishes synthetic presentation, host transport, native WinForms and live radio evidence. It does not certify 1:1 radio behavior.
+Status reviewed 2026-11-12: Stage 1 implementation passed local packaged browser qualification on 2026-11-09: 42/42 tests across Edge, Firefox and WebKit, plus a headed Edge smoke test. The supplied remote record qualifies normal WinForms startup and legacy TCI read queries. The deployed lab now also passes strict TLS/WSS transport checks. Trusted cross-machine browser acceptance using wildcard DNS from `192.168.0.0/24` remains required; the user explicitly retained that gate on 2026-11-12. Stage 1 is not signed off yet. This record distinguishes synthetic presentation, host transport, native WinForms and live radio evidence; it does not certify 1:1 radio behavior.
 
 ## Build and visible result
 
 The distribution uses Code OSS 1.146.0, revision `fdefc478b9148c1a47f913b3ec618a1226d9f600`, Node 24.22.1 and pnpm 12.16.0. Current UI build: `cac645333037c6a7841aa768524c934cd090fbe7559e36b3a4d32a4f5afa7d34`. The upstream cache fingerprint is `82ddb3c930c8e0b7ad430464f29b2ef53104577da81598f3df485a4f8bfda7ff`; packaging exposes 769 allowlisted files.
+
+That identity belongs to the local browser matrix. The supplied remote package identifies UI build `7cb193796b660b17be9ce3ca91b821ad2a494398bb176359aacd24a1f372061d`, with the same Code revision/cache fingerprint. The 2026-11-12 [deployment audit](D:/workspace/Thetis/docs/ui-parity/evidence/2026-11-12-deployment-audit.json) independently verifies its package SHA256 and byte-for-byte matches for bootstrap, extension code, panel code and panel CSS against the local qualified output. Distinct build identities are retained rather than silently relabelled.
 
 The [actual packaged browser capture](D:/workspace/Thetis/docs/ui-parity/reference/foundation-stage1.png) shows the initial layout: power/gains on the left, VFOs and synthetic plots in Console, receiver sections on the right, and host/demo status below. It was captured from Thetis's staged endpoint, not a mockup. The [historical manual picture](D:/workspace/Thetis/docs/ui-parity/reference/manual-1.1-page-10.png) remains a separate source reference.
 
@@ -43,14 +45,22 @@ The [lifecycle test](D:/workspace/Thetis/ui/tests/foundation/lifecycle.e2e.ts) r
 
 The earlier Hello World intermittent click misses are not retroactively attributed to one of these findings without matching evidence.
 
-## Qualified remote acceptance and WinForms compatibility
+## Remote acceptance and its scope
 
 | Area | Qualified evidence |
 |---|---|
-| Remote deployment & LAN acceptance | Package `Thetis-Release-x64.zip` deployed and extracted to `radiolab@192.168.3.165:D:\ThetisDevelopment`. `-code-demo` mode verified via local machine (health check `200 OK`, workbench HTML `200 OK`, and WebSocket diagnostic upgrade `101 Switching Protocols`). Production database untouched. [Evidence](file:///d:/workspace/Thetis/build/foundation-evidence/remote-acceptance.json) |
-| Normal WinForms / legacy TCI | Qualified on remote host `192.168.3.165` (`HAM\radiolab`, interactive Session 2). Process 16228 loaded `ChannelMaster.dll`, `wdsp.dll`, `cmASIO.dll`, `PA19.dll`, `libfftw3-3.dll`, `libSkiaSharp.dll`, `d3d11.dll`, `d2d1.dll`. Legacy TCI handshake (`HTTP/1.1 101 Switching Protocols`) and state queries (`ready;`, `vfo:0,0;` -> `14043278`, `modulation:0;` -> `CWU`, `drive;`, `device;` -> `ANAN100D`) succeeded over the network from isolated profile `D:\ThetisDevelopment\ProfileCopy\` with zero changes to production profile. [Evidence](file:///d:/workspace/Thetis/build/foundation-evidence/remote-acceptance.json) |
+| Remote deployment / recorded HTTP and WS | The supplied 2026-11-09 [acceptance record](D:/workspace/Thetis/docs/ui-parity/evidence/2026-11-09-remote-acceptance.json) reports deployment to `HAM\radiolab` at `192.168.3.165:D:\ThetisDevelopment`, HTTP 200 health/HTML/config and a WS 101 diagnostic upgrade. On 2026-11-12, SSH verification independently matched the ZIP SHA256 `2690269DE164B861FD8E2D613EADA9025D69B969420E32AD7D9316ED74D71EC2`. The original record is archived unchanged. It contains no trusted browser HTTPS/WSS, wildcard-DNS or allowed-subnet client result. |
+| Normal WinForms / legacy TCI | The supplied record attests visible startup in interactive Session 2, with native modules loaded and production profile unchanged. The isolated profile is `D:\ThetisDevelopment\ProfileCopy\`. On its configured legacy port 50005, it records a 101 handshake and `ready;`, `vfo:0,0;` -> `14043278`, `modulation:0;` -> `CWU`, `drive;` and `device;` -> `ANAN100D`. These are startup/read-query compatibility results, not RF transmit, audio-stream or calibration qualification. No repeat interactive startup was performed during the 2026-11-12 audit. |
+| Lab certificate preparation | The maintained helper created a local CA and a base/wildcard server certificate in `HAM\radiolab`'s CurrentUser/My store. Both keys are non-exportable. Thumbprint configuration and the public CA export were verified. No Root trust, DNS, firewall or subnet-policy changes were made. [Audit](D:/workspace/Thetis/docs/ui-parity/evidence/2026-11-12-deployment-audit.json). |
+| Deployed TLS/WSS transport | On 2026-11-12, the real remote process passed TLS 1.2 for the base name, a webview hostname and an extension-host hostname, with required CA-chain/hostname verification; an unrelated hostname was rejected. A masked diagnostic echo over WSS passed, followed by zero diagnostic connections. This used SSH forwarding to remote loopback, explicitly excluding real DNS/browser/subnet acceptance. The owned demo process and tunnel were stopped afterward. [Result](D:/workspace/Thetis/docs/ui-parity/evidence/2026-11-12-remote-tls-transport.json). |
 
-## Open acceptance (Stage 2 and beyond)
+## Required Stage 1 network acceptance
+
+The lab has only `192.168.3.165/24` and loopback. The workspace host has `192.168.114.100`; neither supplies the required `192.168.0.0/24` test-client address. The lab had no `thetis.home.arpa` DNS record or Code-host certificate configuration before preparation. Certificate configuration is now ready, but actual DNS publication, intended-client CA trust, routing/firewall access and a browser run from the allowed subnet are still outstanding.
+
+To close this gate, identify the local DNS server/router and an accessible client on the allowed subnet, publish the base and wildcard records, establish public-CA trust on that client, verify routing and the scoped firewall rule, and run the packaged browser suite against `https://thetis.home.arpa:50001/`. Require extension activation, scripted webviews, diagnostic WSS echo and secure-context/service-worker results with certificate checks enabled. Follow the [lab preparation and remaining procedure](D:/workspace/Thetis/docs/ui-parity/lan-setup.md). Neither the supplied HTTP/WS result nor the later tunneled TLS result waives this gate.
+
+## Later reconstruction and availability gaps
 
 | Area | Current evidence and remaining work |
 |---|---|
@@ -59,4 +69,4 @@ The earlier Hello World intermittent click misses are not retroactively attribut
 | Radio / audio / external control | No radio model, firmware, RF calibration, audio driver, live receive/transmit timing, hardware effects or operational CAT/TCI control has been qualified. Synthetic Stage 1 tests cannot qualify them. Shared services belong to Stage 2; live reception begins in Stage 3. |
 | Real displays/devices | Actual Windows scaling, intended mobile browsers and trusted remote-device behavior remain unqualified. Record browser/OS, scale, profile, skin, receiver/capabilities and units for each run. |
 
-Stage 1 foundation, remote deployment, and legacy WinForms TCI compatibility criteria are complete. Keep future radio and shared services work within Stage 2 and the overall ten-stage roadmap.
+The implementation, local browser matrix, remote deployment and supplied normal-mode compatibility evidence are available. Stage 1 sign-off remains pending the required secure LAN browser acceptance. Shared radio services and reconstruction remain in their existing stages of the ten-stage roadmap.
