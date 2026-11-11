@@ -828,6 +828,9 @@
     <Compile Include="Hosting\HostHttp.cs" />
     <Compile Include="Hosting\CodeHost.cs" />
     <Compile Include="Hosting\DiagnosticWebSocket.cs" />
+    <Compile Include="RadioServices\RadioContracts.cs" />
+    <Compile Include="RadioServices\RadioApplication.cs" />
+    <Compile Include="RadioServices\RadioCommandDispatcher.cs" />
     <Compile Include="titlebar.cs" />
     <Compile Include="TuneStep.cs" />
     <Compile Include="ucOtherButtonsOptionsGrid.cs" />

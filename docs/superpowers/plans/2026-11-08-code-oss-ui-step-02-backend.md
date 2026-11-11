@@ -1,100 +1,106 @@
-# Step 02: Shared Backend and Exclusive Startup Implementation Plan
+# Step 02: Shared Backend and Exclusive Frontend Startup Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development or superpowers:executing-plans to implement this plan task-by-task. Track work with checkboxes. This document plans future implementation; it does not claim services/tests already exist.
+> Approved for implementation on 2026-11-12. Execute the eight packages below within Stage 2; retain the overall ten-stage roadmap. Qualification belongs to each package. This document records progress without claiming unimplemented behavior.
 
-**Goal:** Run one shared radio application model through either WinForms or Code, with the frontend selected before initialization and no hidden operational WinForms tree in Code mode.
+**Goal:** Run the same shared radio backend through either WinForms or Code, selected before initialization, without operational Forms/Controls in Code mode. Stage 3 owns the live receiving interface.
 
-**Architecture:** Extract state, settings application, command dispatch and behavior-owning lifetimes into form-independent services inside the existing managed project. WinForms becomes an adapter; the browser uses a typed, versioned channel through the existing embedded server. Keep native exports unchanged.
+**Architecture:** Extract behavior incrementally, migrate the WinForms adapter to each shared service, then connect the browser. Shared C# owns settings, effective state, native resources, workers and shutdown. One extension-owned connection/model serves all Code panels.
 
-**Tech Stack:** Windows x64, net48-compatible C#, current native C/C++ libraries, TypeScript browser extension and the qualified Step 01 embedded host.
+**Tech stack:** Existing Windows x64 CMake/MSVC/net48 project, current native ABI, pinned Code OSS, TypeScript/esbuild/Vitest/Playwright. No new production web server.
 
-**Spec:** [Overall layout and contracts][overview], [source analysis][analysis] and [Step 01][step01].
+## Confirmed decisions and constraints
 
-## Global Constraints
+- Ordinary launch shows a chooser, initially selecting Windows and remembering the last confirmed choice. Explicit `-ui:windows` / `-ui:code` shortcuts bypass it without changing that choice. Dispose the chooser before backend initialization.
+- Keep `-code-demo` as an isolated synthetic mode; reject conflicting mode arguments.
+- Code admits one controlling browser connection. Additional tabs/browsers are rejected, with an explicit Retry action; no viewer mode or handover workflow.
+- Closing a browser leaves the backend running. Provide graceful Stop and Restart commands even during startup prompts.
+- Preserve explicit autostart and existing CAT/TCI/MIDI/PTT behavior through shared services. Browser attachment alone never powers the radio.
+- Keep existing hosting behavior and `192.168.0.0/16`; no TLS/DNS/certificate/login work.
+- Preserve settings keys, profile/database selection, backup/recovery and feature-specific Apply/Cancel semantics. Browser presentation preferences stay separate.
+- Code constructs no hidden Console, Setup, CWX or other operational Form/Control. Driver-required STA/message services are allowed.
+- Keep native exports, net48, CLI builds, runtime staging and Windows behavior. Each independently verified operation receives a conventional commit.
 
-- Depends on qualified Step 01; preserve one operational frontend chosen before Console/splash creation.
-- No backend service may require Form/Control handles, reflection-based event-handler RPC or browser timer precision.
-- Preserve native ABI, net48, configuration keys/backups, external CAT/TCI/MIDI/PTT behavior and existing initialization order where behavior depends on it.
-- Keep the existing managed project and CMake/CLI staging; no framework migration, IDE artifacts or extra production server. Port remains 50001.
-- Every independent code/configuration/asset operation passes targeted checks and the required Release pipeline, then receives a coherent commit. No emojis.
+## Shared interfaces
 
-## Review Focus
+- `RadioApplication.StartAsync(options, cancellationToken)`, `StopAsync(cancellationToken)` and `GetSnapshot()`.
+- `RadioCommandDispatcher.ExecuteAsync(command, cancellationToken)`; browser `RadioClient.execute`, `getSnapshot` and disposable `subscribe`.
+- Schema version 1, backend generation and monotonically ordered revision. Explicit `rx1`/`rx2`/`sub` receiver and separate `a`/`b` VFO identities; validated integer Hz.
+- Commands carry request ID, backend generation, connection ID, positive sequence, typed operation/payload and optional expected revision.
+- Publish effective applied values; a failed native call cannot produce a successful acknowledgment.
+- Bounded queues/results, duplicate high-water marks and no mutation replay after reconnect. A fresh connection receives a snapshot before ordinary mutations.
+- `/code/control` uses existing WS/WSS configuration. First atomically admitted connection controls; others receive `controllerBusy` then close, with no snapshot/subscription. Heartbeat 15 seconds; unresponsive ownership released after 45 seconds. Cleanup releases only its own connection.
+- Port 50001 belongs to the embedded host independently of TCI enablement. Share it when legacy TCI uses 50001; retain a separate legacy listener for configured ports such as 50005. Windows exposes no operational Code channel.
 
-1. A saved EQ/XVTR/PureSignal/profile value loads without the old form but never reaches DSP: compare effective state, not only deserialized values.
-2. Browser reload/new session receives an old command or acknowledgment: reject stale generations and never replay PTT.
-3. CAT/MIDI callbacks arrive during startup/shutdown: preserve ordering and use one UI-neutral dispatcher without blocking audio callbacks.
-4. WinForms and Code use different settings keys or cancel behavior: preserve schema and feature-specific transactions across mode restarts.
-5. Code mode accidentally constructs an invisible form to keep the application alive: require a no-form startup/lifetime test, including eager helper constructors.
+## Work packages and embedded checks
 
-## Proposed files and shared interface contract
+### 2.A: Behavior record and shared contracts
 
-Create `Project Files/Source/Console/RadioServices/{RadioApplication.cs,RadioContracts.cs,RadioCommandDispatcher.cs,RadioSettingsService.cs,RadioCapabilityService.cs,HostFileAccess.cs}` and `Hosting/{UiMode.cs,ApplicationBootstrap.cs,RadioControlChannel.cs}`. Add explicit [project][project] entries. Adapt [Main][main], [InitConsole][init], [Setup persistence/application][settings], [NetworkIO][network], [Audio][audio], [cmaster][cmaster], [TCI][tci], [CAT dispatch][cat-dispatch] and behavior-owning forms as extraction proceeds.
+- [x] Record startup/settings/callback/shutdown behavior owners and ordering from current source.
+- [x] Implement immutable snapshots, typed results, ordered bounded dispatch and subscriptions.
+- [x] Check shared C#/TypeScript JSON fixtures, concurrency, duplicate eviction, stale identities, conflicts, invalid values and failed native application.
+- [x] Run targeted tests, Release pipeline and commit. New services alone do not qualify legacy migration.
 
-Create `ui/thetis-extension/src/contracts.ts`, `transport/radioClient.ts`, `state/radioModel.ts` and shared test fixtures. Create proposed `tests/Thetis.RadioServices.Tests/Thetis.RadioServices.Tests.csproj`, `BootstrapTests.cs`, `SettingsCompatibilityTests.cs`, `CommandDispatchTests.cs`, plus `ui/thetis-extension/test/backend.test.ts` and `test/e2e/backend.spec.ts`. Use a Windows net48-compatible test runner with fake native/radio adapters; preserve the `dotnet test` command contract consumed by later plans.
+### 2.B: Settings without semantic changes
 
-Core proposed types:
+- [ ] Replace control-walking persistence with explicit mappings, preserving keys, representations and unrelated entries/layout.
+- [ ] Cover State/Options/profiles/filters/EQ/routing/calibration and required feature settings, ordered application, backups/migrations and Apply/Cancel.
+- [ ] Compare Windows-Code-Windows copied-profile round trips and effective native values; test corruption and interrupted writes.
+- [ ] Verify, Release-build and commit each independent mapping/service extraction.
 
-- `ReceiverId = 'rx1' | 'rx2' | 'sub'`; wire frequency is a validated safe integer number of Hz. The C# equivalent uses Int64 and checks browser-safe representation plus actual model limits. Adapters alone convert existing MHz and zero-based indices.
-- `RadioCommand {requestId, sessionGeneration, operation, target?, expectedRevision?, payload}`. Feature plans define typed operation/payload unions. expectedRevision is optional and used for stale-sensitive editing transactions, not required on every high-rate tuning/telemetry action.
-- `CommandResult {requestId, sessionGeneration, accepted, revision, error?}`; errors have stable code, useful message and field/capability detail. The backend owns effective values and clamping/rejection semantics.
-- `RadioSnapshot {schemaVersion:1, sessionGeneration, revision, connectionState, capabilities, receivers, ...domainPayloads}` and `RadioStateEvent {schemaVersion:1, sessionGeneration, revision, changes}`. Revision orders application state; raw audio/IQ/graphics use separate bounded streams, not one giant JSON event per sample.
-- `RadioClient.execute(command: RadioCommand): Promise<CommandResult>`, `getSnapshot(): Promise<RadioSnapshot>`, `subscribe(listener: (event: RadioStateEvent) => void): Disposable`.
-- `RadioApplication.Start(UiMode mode)`, `Stop()`, `GetSnapshot()` and serialized `RadioCommandDispatcher.Execute(RadioCommand command): CommandResult`. Feature services implement domain operations and publish state through this owner, not new independent sockets.
+### 2.C: Native initialization and shutdown
 
-Expose an opaque host-file access boundary; Step 06 names the shared HostFileRef DTO. The browser never supplies an unrestricted engine filesystem path. Preserve each existing import/export dialog's useful choices through that boundary.
+- [ ] Extract DSP/wisdom/cache/router/audio/network lifetime; remove shared Console/Setup/cursor/dialog dependencies.
+- [ ] Preserve native order and ASIO STA requirements. Separate initialization/readiness/powered receive; roll back partial initialization and make stop idempotent.
+- [ ] Check native call ordering, injected failures, missing drivers/devices, repeated start/stop and actual staged DSP cleanup.
+- [ ] Verify, Release-build and commit.
 
-## Task 1: Extract settings and effective startup state
+### 2.D: Background behavior and controllers
 
-- [ ] Write failing `StartupAppliesProfileWithoutForms`, `LegacySettingsRoundTripAcrossModes` and `CorruptDatabaseRetainsBackupAndError` cases using copied fixtures. Assert effective mode/filter/EQ/route/calibration values and backing key equality, not only successful XML parsing.
-- [ ] Run `dotnet test tests/Thetis.RadioServices.Tests/Thetis.RadioServices.Tests.csproj -c Release --filter SettingsCompatibility`; require new cases to expose missing extraction.
-- [ ] Extract typed settings readers/application order from [SaveOptions/recovery][settings], including model selection, forced updates and selective Apply/Cancel behavior. Preserve legacy keys and backup/schema rules; move UI layout into separate presentation storage.
-- [ ] Adapt WinForms to display shared state and route edits through the same feature operations. Pass reference state/backup fixtures and full Release build; commit this settings operation.
+- [ ] Extract EQ/XVTR/profile/PureSignal application, meter acquisition, CWX runtime, CAT/TCI/MIDI/PTT and remaining supported startup workers in dependency order.
+- [ ] Adapt WinForms event handlers and state notifications to shared operations. Do not drop loaded behavior because its editor comes later.
+- [ ] Explicitly report unsupported enabled capabilities/faults; never silently ignore them or claim qualification.
+- [ ] Check controller responses/mutations, worker lifetime/order, profile effects, cancellation and races. Use fake hardware for transmit checks. Verify, Release-build and commit per service.
 
-## Task 2: Establish command dispatch and typed transport
+### 2.E: Exclusive startup and notifications
 
-- [ ] Add `ConcurrentSourcesConverge`, `RejectsOldSessionGeneration`, `DuplicateRequestDoesNotRepeatMutation`, `StaleTransactionalEditReturnsConflict` and `SnapshotGapResynchronizesWithoutPttReplay`. Assert one effective transition, ordered revision and no replayed keying.
-- [ ] Run managed `--filter CommandDispatch` and `pnpm --dir ui run test -- backend`; confirm these new cases fail.
-- [ ] Implement the dispatcher/model/channel, reserving a control route independently of legacy TCI. Resolve authorization/session/origin at the boundary; validate payload types and feature capability in C#. Bound queues and move slow serialization/network output off audio/IQ callbacks. Preserve TCI handshake/framing and command behavior.
-- [ ] Implement the exact shared RadioClient API above. Recreated views resubscribe to the extension-owned model, obtain snapshots after gaps/session changes and show pending/error state without inventing acknowledged radio values. Pass tests, actual endpoint E2E and Release build; commit.
+- [ ] Move entry-point ownership out of Console; implement chooser/arguments and shared lifetime.
+- [ ] Start Code hosting before DB/DSP initialization. Present typed startup progress and prompts rather than backend MessageBoxes.
+- [ ] Preserve DB/wisdom choices; disconnected browsers do not accept prompts. Stop cancels pending startup and Restart retains mode/arguments after complete shutdown.
+- [ ] Check selection order, chooser cancellation, no operational forms, reconnecting prompts and graceful stop/restart. Verify, Release-build and commit.
 
-## Task 3: Remove behavior lifetimes from eager forms
+### 2.F: Embedded control channel
 
-- [ ] Trace eager construction in [InitConsole][init], including PureSignal, meters, CWX, serial listeners, EQ, Setup, XVTR, memories and restored profiles. Add `NoOperationalFormsRequiredForReadyState` and `LifecycleOrderMatchesReference`, with fake adapters that record ordering and worker counts.
-- [ ] Run managed `--filter Bootstrap`; require a failure when a constructor creates a Form/Control or depends on its handle. Record legitimate native STA/driver requirements separately from presentation.
-- [ ] Extract required worker/state lifetimes before eliminating each form dependency. Preserve CWX-before-serial ordering, meter-before-state recovery, EQ/XVTR/PureSignal configuration application and supported background services. Later editors may be missing; their required loaded behavior cannot disappear. Capability-gate genuinely unqualified optional features explicitly.
-- [ ] Replace synchronous Console.Invoke assumptions in CAT/TCI/native callbacks with the UI-neutral dispatcher; keep WinForms marshaling solely in its adapter. Pass Windows baseline, no-form startup and bounded shutdown tests; run Release and commit each independent extracted service.
+- [ ] Reuse request classification/framing; separate assets, diagnostics, control and legacy TCI.
+- [ ] Enforce one browser, identity/generation/schema checks, bounded state output, fresh snapshot and gap resynchronization.
+- [ ] Extend health/host configuration with actual frontend/lifecycle/control state.
+- [ ] Check simultaneous connections, rejected tabs, reconnect/cleanup races, malformed frames, slow consumers, restart and shared/custom TCI ports. Verify, Release-build and commit.
 
-## Task 4: Select the frontend before initialization
+### 2.G: Authoritative workbench integration
 
-- [ ] Add `UiSelectionPrecedesAnyForm`, `CodeStopReleasesNativeResources`, `ExternalCallbackDuringShutdownIsRejected` and `ModeRestartKeepsSettings`. Assert one backend and zero Form-derived presentation objects in Code mode; Windows mode still opens Console normally.
-- [ ] Implement proposed `-ui:windows` and `-ui:code` parsing in ApplicationBootstrap before [current Main construction][main]. Default remains Windows until the qualified Code slice is deliberately selected. Use a host lifetime independent of an operational form; a necessary STA/message service is not permission to hide a Console.
-- [ ] Reuse existing shutdown/restart/instance semantics with the selected frontend. Launch the Windows backend before opening a browser; the browser sandbox cannot launch local executables. Never add a second operational interface as a compatibility fallback.
-- [ ] Run managed/transport/E2E lifecycle checks and Release build; commit the bootstrap operation and record supported versus unqualified service combinations.
+- [ ] Separate demo and operational stores; bind readiness/status/diagnostics and VFO editing through the same backend operation as Windows.
+- [ ] Display authoritative values, pending/errors and unavailable controls. Synthetic plots never masquerade as live data.
+- [ ] Keep stable views/layout/serializer/skins/responsiveness; recreated views reuse the model. Never import demo values into radio settings.
+- [ ] Check physical first input, external edits, recreated views, rejection/retry, reconnect, layout and store isolation. Verify, Release-build and commit.
 
-## Embedded qualification and handoff
+### 2.H: Repeatable packaging and evidence
 
-Compare separate Windows/Code runs from the same copied settings. Check startup/readiness/errors, late external callbacks, shutdown/restart, repeated sessions, stale commands and no hidden forms. Reopen/move/hide synthetic views while verifying the same backend generation and state. Test stream/controller load for bounded memory, callback latency and client cleanup; use real hardware for driver/radio shutdown/readiness evidence rather than claiming fake-adapter results cover it.
+- [ ] Maintain an executable net48 harness following repository conventions, with selectors that fail on zero tests.
+- [ ] Maintain packaged browser acceptance and separate-mode copied-profile comparisons, recording package identity, phases, effective settings and cleanup measurements.
+- [ ] Exercise the staged build on the existing lab machine via its established connection method; distinguish actual lab evidence from local/fake tests.
+- [ ] Update downstream contract/test references in place, preserving ten stages. Verify, Release-build and commit.
+
+## Acceptance commands
 
 ```powershell
-dotnet test tests/Thetis.RadioServices.Tests/Thetis.RadioServices.Tests.csproj -c Release --filter Bootstrap
-dotnet test tests/Thetis.RadioServices.Tests/Thetis.RadioServices.Tests.csproj -c Release --filter SettingsCompatibility
-dotnet test tests/Thetis.RadioServices.Tests/Thetis.RadioServices.Tests.csproj -c Release --filter CommandDispatch
+powershell -NoProfile -ExecutionPolicy Bypass -File tests/Thetis.RadioServices.Tests/run.ps1
+pnpm --dir ui run build
 pnpm --dir ui run test -- backend
 pnpm --dir ui run test:e2e -- backend
 powershell -NoProfile -ExecutionPolicy Bypass -File ./build.ps1 -All -Config Release
 ```
 
-Step 03 consumes authoritative snapshots/capabilities/commands and independently running lifecycle. Completion requires effective state and worker behavior, not a blank browser connected to a hidden WinForms application.
+Completion requires working exclusive startup, equivalent effective settings, one admitted browser, no replay/restart on reload, preserved Windows/controllers, reachable prompts/Stop/Restart, no hidden forms and bounded resources across repeated runs. Stage 3 consumes the resulting lifecycle, contracts, settings, adapters and client for connection Setup, receive controls and calibrated plots.
 
-[overview]: <D:/workspace/Thetis/docs/superpowers/plans/2026-11-08-code-oss-ui-reconstruction.md>
-[analysis]: <D:/workspace/Thetis/docs/superpowers/specs/2026-11-08-code-oss-ui-reconstruction-design.md>
-[step01]: <D:/workspace/Thetis/docs/superpowers/plans/2026-11-08-code-oss-ui-step-01-foundation.md>
-[project]: <D:/workspace/Thetis/Project Files/Source/Console/Thetis.csproj>
-[main]: <D:/workspace/Thetis/Project Files/Source/Console/console.cs:1404>
-[init]: <D:/workspace/Thetis/Project Files/Source/Console/console.cs:1704>
-[settings]: <D:/workspace/Thetis/Project Files/Source/Console/setup.cs:1520>
-[network]: <D:/workspace/Thetis/Project Files/Source/Console/HPSDR/NetworkIO.cs:27>
-[audio]: <D:/workspace/Thetis/Project Files/Source/Console/audio.cs>
-[cmaster]: <D:/workspace/Thetis/Project Files/Source/Console/cmaster.cs>
-[tci]: <D:/workspace/Thetis/Project Files/Source/Console/TCIServer.cs:6804>
-[cat-dispatch]: <D:/workspace/Thetis/Project Files/Source/Console/console.cs:15592>
+## Implementation evidence
+
+The [source extraction record](file:///D:/workspace/Thetis/docs/ui-parity/backend-extraction.md) identifies actual dependencies and the evidence boundary. The approved plan is the task authority; unchecked packages remain required work.

@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "sessionGeneration": "contract-fixture-v1",
+  "revision": 7,
+  "lifecycle": "ready",
+  "receivers": [
+    { "id": "rx1", "vfoAHz": 14200001, "vfoBHz": 7100000 },
+    { "id": "rx2", "vfoAHz": null, "vfoBHz": null }
+  ],
+  "capabilities": ["receiver.setFrequency"],
+  "fault": null
+}
