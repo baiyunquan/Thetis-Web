@@ -20,6 +20,9 @@ internal static class Program
             ["Dispatch.SnapshotCannotBeMutated"] = SnapshotCannotBeMutated,
             ["Dispatch.StoppedDispatcherRejectsCommands"] = StoppedDispatcherRejectsCommands
             , ["Contracts.SharedWireFixtureRoundTrips"] = SharedWireFixtureRoundTrips
+            , ["Settings.MergePreservesOtherSettings"] = SettingsTests.MergePreservesOtherSettings
+            , ["Settings.AtomicWritePreservesSchemaAndPreviousFileOnFailure"] = SettingsTests.AtomicWritePreservesSchemaAndPreviousFileOnFailure
+            , ["Settings.LegacyFrequencyUsesInvariantSixDecimals"] = SettingsTests.LegacyFrequencyUsesInvariantSixDecimals
         };
         string selector = args.FirstOrDefault() ?? "All";
         var selected = cases.Where(x => selector == "All" || x.Key.IndexOf(selector, StringComparison.OrdinalIgnoreCase) >= 0).ToArray();

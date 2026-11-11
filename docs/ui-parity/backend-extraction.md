@@ -33,4 +33,6 @@ The bounded dispatcher checks registered connection identity at admission and ex
 
 The Database Manager editor is now created only by an explicit ShowDBMan request. Metadata access and automatic backup refreshes no longer create it. A deployed-AppDomain probe exercises startup-style backup and configured shutdown backup against temporary XML, verifies both copies unchanged and confirms the editor field stays null. Database migration prompts and the broader settings extraction remain pending.
 
+Windows database dictionary reads/merges and XML writes now use shared form-independent persistence primitives. A flushed sibling file is atomically moved/replaced, leaving the previous database intact if replacement fails. Tests cover profile schema, unknown keys, Windows layout entries, empty values, locale-independent MHz conversion, unavailable sentinels and temporary-file cleanup. This extracts storage, not the full control-to-domain mapping or effective profile application.
+
 The harness uses a fake command target to test state and dispatch behavior. No hardware, settings, CWX, frontend startup, controller migration or operational browser acceptance is established by those results. Each later package adds its own reference comparisons and evidence.

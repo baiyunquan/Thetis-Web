@@ -4138,7 +4138,7 @@ namespace Thetis
                         bClickTuneRX1 = bool.Parse(val);
                         break;
                     case "VFOAFreq":
-                        dVFOAFreq = double.Parse(val); // MW0LGE_21c need to do this at end, as we used center_freq etc
+                        dVFOAFreq = RadioServices.LegacySettingCodecs.ParseMhz(val); // MW0LGE_21c need to do this at end, as we used center_freq etc
                         break;
                     case "CentreFrequency":
                         dRX1_centre_freq = double.Parse(val);
@@ -4148,7 +4148,7 @@ namespace Thetis
                         bClickTuneRX2 = bool.Parse(val);
                         break;
                     case "VFOBFreq":
-                        dVFOBFreq = double.Parse(val); // MW0LGE_21c need to do this at end, as we used center_freq etc
+                        dVFOBFreq = RadioServices.LegacySettingCodecs.ParseMhz(val); // MW0LGE_21c need to do this at end, as we used center_freq etc
                         break;
                     case "VFOASubFreq": // MW0LGE_21a
                         _force_vfo_update = true;

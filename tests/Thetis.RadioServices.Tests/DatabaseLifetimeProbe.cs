@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using System.Reflection;
+using System.Data;
+using System.Collections.Generic;
 
 namespace Thetis.Tests
 {
@@ -36,6 +38,21 @@ namespace Thetis.Tests
                 if (copies.Length != 2) throw new InvalidOperationException("Startup and shutdown backup count differs from legacy behavior.");
                 foreach (string copy in copies)
                     if (File.ReadAllText(copy) != xml) throw new InvalidOperationException("Backup changed database contents.");
+                var db = assembly.GetType("Thetis.DB", true);
+                using (var data = new DataSet("Data"))
+                {
+                    var state = data.Tables.Add("State"); state.Columns.Add("Key"); state.Columns.Add("Value");
+                    state.Rows.Add("unknown_future_setting", "a/b/c"); state.Rows.Add("Left", "123");
+                    db.GetField("ds").SetValue(null, data);
+                    var patch = new Dictionary<string, string> { ["VFOAFreq"] = "14.200001" };
+                    db.GetMethod("SaveVarsDictionary").Invoke(null, new object[] { "State", patch, true });
+                    var restored = (Dictionary<string, string>)db.GetMethod("GetVarsDictionary").Invoke(null, new object[] { "State" });
+                    if (restored["unknown_future_setting"] != "a/b/c" || restored["Left"] != "123" || restored["VFOAFreq"] != "14.200001")
+                        throw new InvalidOperationException("Deployed database adapter lost unrelated values.");
+                    bool wrote = (bool)db.GetMethod("WriteDB", new[] { typeof(string), typeof(DataSet) }).Invoke(null, new object[] { Path.Combine(fixture, "roundtrip.xml"), data });
+                    if (!wrote) throw new InvalidOperationException("Deployed database adapter could not write XML.");
+                    db.GetField("ds").SetValue(null, null);
+                }
                 if (manager.GetField("_frm_dbman", BindingFlags.Static | BindingFlags.NonPublic).GetValue(null) != null)
                     throw new InvalidOperationException("Backups constructed the Database Manager editor.");
             }
@@ -45,7 +62,7 @@ namespace Thetis.Tests
                     !Path.GetFileName(fixture).StartsWith("ThetisDbProbe-", StringComparison.Ordinal)) throw new InvalidOperationException("Invalid fixture cleanup path.");
                 if (Directory.Exists(fixture)) Directory.Delete(fixture, true);
             }
-            return "PASS Database metadata, startup backup and shutdown backup create no presentation objects and preserve XML.";
+            return "PASS Database metadata/backups/persistence preserve XML and unrelated keys without creating presentation objects.";
         }
     }
 }

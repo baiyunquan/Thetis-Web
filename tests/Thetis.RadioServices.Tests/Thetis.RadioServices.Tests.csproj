@@ -5,6 +5,7 @@
     <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="System.Data" />
     <Compile Include="*.cs" />
     <None Include="../fixtures/radio-snapshot-v1.json" Link="radio-snapshot-v1.json" CopyToOutputDirectory="PreserveNewest" />
     <Compile Include="../../Project Files/Source/Console/RadioServices/**/*.cs" Link="RadioServices/%(Filename)%(Extension)" />

@@ -9543,7 +9543,7 @@ namespace Thetis
         {
             try
             {
-                dsIN.WriteXml(fn, XmlWriteMode.WriteSchema);
+                RadioServices.LegacySettingsStore.WriteAtomic(dsIN, fn);
                 DBMan.DBWritten();
             }
             catch (Exception ex)
@@ -9915,35 +9915,8 @@ namespace Thetis
 
             checkForPrimaryKeys(tableName);
 
-            foreach(KeyValuePair<string,string> kvp in dict)
-            {
-                string key = kvp.Key;
-                string value = kvp.Value;
-
-                if (!bSaveEmptyValues && value.Length == 0) // skip it as no data was provided
-                    continue;
-
-                //MW0LGE converted to Rows.Find because it is insanely faster, needs a primary key though
-                DataRow r = null;
-                try
-                {
-                    r = ds.Tables[tableName].Rows.Find(key);
-                }
-                catch
-                {
-                }
-                if (r != null)
-                {
-                    r[1] = value;
-                }
-                else
-                {
-                    DataRow newRow = ds.Tables[tableName].NewRow();
-                    newRow[0] = key;
-                    newRow[1] = value;
-                    ds.Tables[tableName].Rows.Add(newRow);
-                }
-            }
+            // Preserve the established merge behavior, including unrelated and presentation keys.
+            RadioServices.LegacySettingsStore.MergeValues(ds.Tables[tableName], dict, bSaveEmptyValues);
         }
         public static void SaveVars(string tableName, List<string> list, bool bSaveEmptyValues = true)
         {
@@ -10003,17 +9976,7 @@ namespace Thetis
             if (!ds.Tables.Contains(table_name))
                 return dict;
 
-            DataTable table = ds.Tables[table_name];
-            dict = new Dictionary<string, string>(table.Rows.Count);
-
-            foreach (DataRow row in table.Rows)
-            {
-                string key = row[0].ToString();
-                string value = row[1].ToString();
-                dict.Add(key, value);
-            }
-
-            return dict;
+            return RadioServices.LegacySettingsStore.ReadValues(ds.Tables[table_name]);
         }
         //public static Dictionary<string, string> GetVarsDictionary(string tableName)
         //{
