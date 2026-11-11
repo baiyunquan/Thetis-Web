@@ -9,6 +9,8 @@
     <Compile Include="*.cs" />
     <None Include="../fixtures/radio-snapshot-v1.json" Link="radio-snapshot-v1.json" CopyToOutputDirectory="PreserveNewest" />
     <Compile Include="../../Project Files/Source/Console/RadioServices/**/*.cs" Link="RadioServices/%(Filename)%(Extension)" />
+    <Compile Include="../../Project Files/Source/Console/enums.cs" Link="enums.cs" />
+    <Compile Include="../../Project Files/Source/Console/HPSDR/clsRadioDiscovery.cs" Link="clsRadioDiscovery.cs" />
     <Reference Include="Newtonsoft.Json"><HintPath>../../Project Files/Source/packages/Newtonsoft.Json.13.0.4/lib/net45/Newtonsoft.Json.dll</HintPath></Reference>
   </ItemGroup>
 </Project>

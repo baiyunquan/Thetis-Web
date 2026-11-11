@@ -29,6 +29,9 @@ internal static class Program
             , ["Lifecycle.StartsOnceAndStopsOnce"] = LifecycleTests.StartsOnceAndStopsOnce
             , ["Lifecycle.PartialFailureRollsBackAndRetainsFault"] = LifecycleTests.PartialFailureRollsBackAndRetainsFault
             , ["Lifecycle.StopCancelsInitializationPrompt"] = LifecycleTests.StopCancelsInitializationPrompt
+            , ["Network.CustomAndFirstFoundBypassRediscovery"] = NetworkConnectionTests.CustomAndFirstFoundBypassRediscovery
+            , ["Network.DiscoveryOptionsAndReturnedProtocolArePreserved"] = NetworkConnectionTests.DiscoveryOptionsAndReturnedProtocolArePreserved
+            , ["Network.InvalidSelectionAndFirmwareDoNotInitializeNative"] = NetworkConnectionTests.InvalidSelectionAndFirmwareDoNotInitializeNative
         };
         string selector = args.FirstOrDefault() ?? "All";
         var selected = cases.Where(x => selector == "All" || x.Key.IndexOf(selector, StringComparison.OrdinalIgnoreCase) >= 0).ToArray();

@@ -23,9 +23,29 @@ namespace Thetis
         public static string GetFWVersionErrorMsg { get; set; } = "";
         public static string BoardMismatch { get; set; } = "";
 
+        // Windows selection adapter. The shared overload below has no Console/Setup dependency.
         public static int InitRadio()
         {
-            int ret = -1;
+            Console c = Console.getConsole();
+            if (c.IsSetupFormNull || c.SetupForm.SelectedRadioList == null) return -1;
+            ucRadioList rl = c.SetupForm.SelectedRadioList;
+            bool perform_search = true;
+            if (rl.IsFirstRadioFoundSelected)
+            {
+                // We need to do a scan here, and use the first found; do not search again.
+                c.SetupForm.ScanForFirstFoundRadio();
+                perform_search = false;
+            }
+            var request = new RadioServices.RadioConnectionRequest(rl.SelectedNICDetails, rl.SelectedRadioDetails,
+                c.SetupForm.ListenToRadioOnUDPPort, HardwareSpecific.Model, HardwareSpecific.Hardware,
+                perform_search, c.SetupForm.LimitInterfacesToEthernetWifi,
+                c.SetupForm.SelectedDiscoveryProfile, c.SetupForm.NetworkProtocolMustMatch);
+            return InitRadio(request, scan => rl.UpdateSelectedDetails(scan, scan.Radios[0])).Code;
+        }
+
+        public static RadioServices.RadioConnectionResult InitRadio(RadioServices.RadioConnectionRequest request,
+            Action<NicRadioScanResult> selectionResolved = null)
+        {
             // 0 everything fine
             // some other non zero not listed below initWSA issue
             // -4 dest ip invalid
@@ -37,156 +57,20 @@ namespace Thetis
             // -104 invalid host IP
             // -105 no nic currently selected
             // -106 no radio currently selected
-
-            Console c = Console.getConsole();
-            if (c.IsSetupFormNull) return -1;
-            if (c.SetupForm.SelectedRadioList == null) return -1;
-            ucRadioList rl = c.SetupForm.SelectedRadioList;
-            if (rl == null) return -1;
-
-            bool perform_search = true;
-            if (rl.IsFirstRadioFoundSelected)
+            var discovery = new RadioDiscoveryService();
+            var connection = new RadioServices.RadioNetworkConnection(discovery.DiscoverUsingSingleNic, nativeInitMetis);
+            var result = connection.Connect(request, selectionResolved);
+            if (result.Code == -101) GetFWVersionErrorMsg = result.FirmwareError;
+            if (result.Code == 0)
             {
-                // we need to do a scan here, and use the first found
-                c.SetupForm.ScanForFirstFoundRadio();
-                perform_search = false; // we dont want to search again
+                BoardID = result.Radio.DeviceType;
+                CurrentRadioProtocol = (RadioProtocol)result.Protocol;
+                FWCodeVersion = result.Radio.CodeVersion;
+                BetaVersion = result.Radio.BetaVersion;
+                Protocol2VersionSupported = result.Radio.Protocol2Supported;
+                BoardMismatch = result.BoardMismatch;
             }
-
-            NicRadioScanResult nic = rl.SelectedNICDetails;
-            RadioInfo ri = rl.SelectedRadioDetails;
-
-            if(nic == null)
-            {
-                return -105; // no nic currently selected
-            }
-            if(ri == null)
-            {
-                return -106; // no radio currently selected
-            }
-
-            string radioIP = ri.IpAddress.ToString();
-            int ratioPort = ri.DiscoveryPortBase;
-            string hostIP = nic.LocalIPv4.ToString();
-            int hostPort = c.SetupForm.ListenToRadioOnUDPPort; // will be any os available port if 0, or specific if set
-            int model_id = (int)HardwareSpecific.Model;
-            int protocol = ri.Protocol == RadioDiscoveryRadioProtocol.P1 ? 0 : 1;
-
-            if (!ri.IsCustom && perform_search)
-            {
-                RadioDiscoveryOptions options = new RadioDiscoveryOptions();
-
-                options.IgnoreSubnetCheck = true;
-                options.IncludeEthernet = true;
-                options.IncludeWireless = true;
-                options.IncludeOtherInterfaceTypes = !c.SetupForm.LimitInterfacesToEthernetWifi;
-                options.AllowLoopback = false;
-                options.AllowAPIPA = true;
-                options.IncludeGeneralBroadcast = true;
-
-                options.DiscoveryPortBase = ratioPort;
-                options.BindLocalPort = hostPort;
-
-                options.ScanPerformance = c.SetupForm.SelectedDiscoveryProfile;
-
-                IPAddress ip;
-                if (IPAddress.TryParse(radioIP, out ip))
-                {
-                    options.FixedTargetIp = ip;
-                }
-                else
-                {
-                    return -103;
-                }
-                if (IPAddress.TryParse(hostIP, out ip))
-                {
-                    options.FixedLocalIp = ip;
-                }
-                else
-                {
-                    return -104;
-                }
-
-                if (c.SetupForm.NetworkProtocolMustMatch)
-                {
-                    switch (protocol)
-                    {
-                        case 0://P1
-                            options.ProtocolMode = RadioDiscoveryProtocolMode.P1Only; // search for p1 only
-                            break;
-                        case 1://P2
-                            options.ProtocolMode = RadioDiscoveryProtocolMode.P2Only; // search for p2 only
-                            break;
-                        default:
-                            return -102; // unknown protocol (never happen, but here incase more are added)
-                    }
-                }
-                else
-                {
-                    options.ProtocolMode = RadioDiscoveryProtocolMode.Auto; // search for both
-                }
-
-                // check via a single nic that matches where we expect the radio to be
-                RadioDiscoveryService svc = new RadioDiscoveryService();
-                NicRadioScanResult scan_result = svc.DiscoverUsingSingleNic(options, options.FixedLocalIp);
-
-                if (scan_result == null || scan_result.Radios == null || scan_result.Radios.Count != 1) return -1;
-                ri = scan_result.Radios[0]; // the one we found
-                protocol = ri.Protocol == RadioDiscoveryRadioProtocol.P1 ? 0 : 1; // update to the result (for auto)
-
-                if (ri.DeviceType == HPSDRHW.HermesII)
-                {
-                    if (ri.CodeVersion < 103)
-                    {
-                        GetFWVersionErrorMsg = "Invalid Firmware!\nRequires 10.3 or greater. ";
-                        return -101;
-                    }
-                }
-
-                // update the radio select list
-                rl.UpdateSelectedDetails(scan_result, scan_result.Radios[0]);
-            }
-
-            ret = nativeInitMetis(radioIP, ratioPort, hostIP, hostPort, protocol, model_id);
-
-            if(ret == 0)
-            {
-                // connected ok
-                BoardID = ri.DeviceType;
-                CurrentRadioProtocol = (RadioProtocol)protocol;
-                FWCodeVersion = ri.CodeVersion;
-                BetaVersion = ri.BetaVersion;
-                Protocol2VersionSupported = ri.Protocol2Supported;
-
-                //[2.10.3.9]MW0LGE added board check, issue icon shown in setup
-                bool board_is_expected_for_model;
-                switch (HardwareSpecific.Model)
-                {
-                    case HPSDRModel.REDPITAYA:
-                        board_is_expected_for_model = BoardID == HPSDRHW.Hermes || BoardID == HPSDRHW.OrionMKII; // can be these two
-                        break;
-                    case HPSDRModel.ANAN10:
-                    case HPSDRModel.ANAN10E:
-                    case HPSDRModel.ANAN100:
-                    case HPSDRModel.ANAN100B:
-                        board_is_expected_for_model = BoardID == HPSDRHW.Hermes || BoardID == HPSDRHW.HermesII; // can be these two
-                        break;
-                    default:
-                        board_is_expected_for_model = BoardID == HardwareSpecific.Hardware;
-                        break;
-                }
-
-                if (!board_is_expected_for_model)
-                {
-                    // the board returned in the packet, does not match the expected board for the Model selected
-                    BoardMismatch = $"The board returned from network query was: {BoardID.ToString()}\nExpected board for model selected is: {HardwareSpecific.Hardware.ToString()}\n\nIf this is expected you can ignore this warning";
-                }
-                else
-                {
-                    BoardMismatch = "";
-                }
-            }
-
-            return ret;
+            return result;
         }
 
         private static float _swr_protect = 1.0f;
