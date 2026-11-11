@@ -44,7 +44,7 @@ namespace Thetis.Tests
                     var state = data.Tables.Add("State"); state.Columns.Add("Key"); state.Columns.Add("Value");
                     state.Rows.Add("unknown_future_setting", "a/b/c"); state.Rows.Add("Left", "123");
                     db.GetField("ds").SetValue(null, data);
-                    var patch = new Dictionary<string, string> { ["VFOAFreq"] = "14.200001" };
+                    var patch = new Dictionary<string, string> { { "VFOAFreq", "14.200001" } };
                     db.GetMethod("SaveVarsDictionary").Invoke(null, new object[] { "State", patch, true });
                     var restored = (Dictionary<string, string>)db.GetMethod("GetVarsDictionary").Invoke(null, new object[] { "State" });
                     if (restored["unknown_future_setting"] != "a/b/c" || restored["Left"] != "123" || restored["VFOAFreq"] != "14.200001")

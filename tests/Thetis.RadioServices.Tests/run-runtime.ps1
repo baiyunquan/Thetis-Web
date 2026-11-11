@@ -8,7 +8,7 @@ $domain = $null
 try {
     [IO.Directory]::CreateDirectory($fixture) | Out-Null
     $probe = Join-Path $fixture 'Thetis.DatabaseLifetimeProbe.dll'
-    Add-Type -Path (Join-Path $PSScriptRoot 'DatabaseLifetimeProbe.cs') -ReferencedAssemblies System.Data -OutputAssembly $probe
+    Add-Type -Path (Join-Path $PSScriptRoot 'DatabaseLifetimeProbe.cs') -ReferencedAssemblies System.Data,System.Xml -OutputAssembly $probe
     $setup = New-Object AppDomainSetup
     $setup.ApplicationBase = $runtime
     $setup.ConfigurationFile = Join-Path $runtime 'Thetis.exe.config'
