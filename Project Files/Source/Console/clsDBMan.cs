@@ -159,7 +159,6 @@ namespace Thetis
             _db_data_path = "";
             _unique_instance_id = "";
             _prune_backups = false;
-            _frm_dbman = new frmDBMan();
         }
         public static bool IsVisible
         {
@@ -206,6 +205,8 @@ namespace Thetis
                 return;
             }
 
+            // Database loading/backups must not construct the editor. Its lifetime begins only on an explicit UI request.
+            if (_frm_dbman == null || _frm_dbman.IsDisposed) _frm_dbman = new frmDBMan();
             Dictionary<Guid, DatabaseInfo> dbs = getAvailableDBs();
             _frm_dbman.InitAvailableDBs(dbs, _dbman_settings.ActiveDB_GUID, Guid.Empty);
 
@@ -399,7 +400,8 @@ namespace Thetis
                             if (vals.ContainsKey("PruneBackups"))
                                 bool.TryParse(vals["PruneBackups"], out prune);
 
-                            _frm_dbman.PruneBackups = prune;
+                            _prune_backups = prune;
+                            if (_frm_dbman != null) _frm_dbman.PruneBackups = prune;
 
                             if (prune && did_backup)
                             {
@@ -1213,7 +1215,7 @@ namespace Thetis
 
             string backup_path = _db_data_path + guid.ToString() + "\\backups";
             List<BackupFileInfo> backups = getOrderedBackupFiles(backup_path);
-            _frm_dbman.InitBackups(backups);
+            _frm_dbman?.InitBackups(backups);
         }
         public static bool TakeBackup(Guid highlighted, string description = "", bool auto = false)
         {
@@ -1283,7 +1285,7 @@ namespace Thetis
         {
             string backup_path = _db_data_path + guid.ToString() + "\\backups";
             List<BackupFileInfo> backups = getOrderedBackupFiles(backup_path);
-            _frm_dbman.InitBackups(backups);
+            _frm_dbman?.InitBackups(backups);
         }
         private static List<BackupFileInfo> getOrderedBackupFiles(string backupFolderPath)
         {            

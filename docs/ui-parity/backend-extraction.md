@@ -31,4 +31,6 @@ The bounded dispatcher checks registered connection identity at admission and ex
 
 ## Qualification boundary
 
+The Database Manager editor is now created only by an explicit ShowDBMan request. Metadata access and automatic backup refreshes no longer create it. A deployed-AppDomain probe exercises startup-style backup and configured shutdown backup against temporary XML, verifies both copies unchanged and confirms the editor field stays null. Database migration prompts and the broader settings extraction remain pending.
+
 The harness uses a fake command target to test state and dispatch behavior. No hardware, settings, CWX, frontend startup, controller migration or operational browser acceptance is established by those results. Each later package adds its own reference comparisons and evidence.
