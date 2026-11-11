@@ -26,6 +26,9 @@ internal static class Program
             , ["Prompts.WaitsForExplicitValidResponse"] = PromptTests.WaitsForExplicitValidResponse
             , ["Prompts.ShutdownCancelsPendingDecisions"] = PromptTests.ShutdownCancelsPendingDecisions
             , ["Prompts.CancellationRemovesOnlyItsOwnPrompt"] = PromptTests.CancellationRemovesOnlyItsOwnPrompt
+            , ["Lifecycle.StartsOnceAndStopsOnce"] = LifecycleTests.StartsOnceAndStopsOnce
+            , ["Lifecycle.PartialFailureRollsBackAndRetainsFault"] = LifecycleTests.PartialFailureRollsBackAndRetainsFault
+            , ["Lifecycle.StopCancelsInitializationPrompt"] = LifecycleTests.StopCancelsInitializationPrompt
         };
         string selector = args.FirstOrDefault() ?? "All";
         var selected = cases.Where(x => selector == "All" || x.Key.IndexOf(selector, StringComparison.OrdinalIgnoreCase) >= 0).ToArray();

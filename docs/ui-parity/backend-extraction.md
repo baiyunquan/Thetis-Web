@@ -37,4 +37,6 @@ Windows database dictionary reads/merges and XML writes now use shared form-inde
 
 Database manager, database error and DSP wisdom MessageBoxes now pass through a compatibility adapter. Windows retains the original native choices/defaults. When a shared prompt broker is installed, initialization waits for an explicit typed choice without constructing a dialog. The broker retains prompt identities independently of browser connections and cancels waiters on shutdown. A deployed prompt probe verifies the bridge and default-button/response mapping. Installing the broker and exposing prompts in an operational Code startup are still pending.
 
+RadioApplication now owns a once-only asynchronous runtime start/stop boundary. Tests cover concurrent starts/stops, rollback after partial startup failure, retained faults and stopping while a startup prompt is waiting. The tested runtime is a fake adapter; the existing native radio/audio startup and shutdown still require migration into that boundary. No operational Code launch path is advertised by this lifecycle foundation.
+
 The harness uses a fake command target to test state and dispatch behavior. No hardware, settings, CWX, frontend startup, controller migration or operational browser acceptance is established by those results. Each later package adds its own reference comparisons and evidence.
