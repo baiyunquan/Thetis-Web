@@ -6,6 +6,9 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="Program.cs" />
+    <Compile Include="ControlTests.cs" />
+    <Compile Include="../../Project Files/Source/Console/RadioServices/**/*.cs" Exclude="../../Project Files/Source/Console/RadioServices/RadioNetworkConnection.cs" Link="RadioServices/%(Filename)%(Extension)" />
+    <Reference Include="System.Data" />
     <Compile Include="../../Project Files/Source/Console/EmbeddedWebContent.cs" Link="EmbeddedWebContent.cs" />
     <Compile Include="../../Project Files/Source/Console/Hosting/**/*.cs" Link="Hosting/%(Filename)%(Extension)" />
     <Reference Include="Newtonsoft.Json"><HintPath>../../Project Files/Source/packages/Newtonsoft.Json.13.0.4/lib/net45/Newtonsoft.Json.dll</HintPath></Reference>

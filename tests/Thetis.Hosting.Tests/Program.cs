@@ -11,7 +11,7 @@ using Newtonsoft.Json.Linq;
 using Thetis;
 using Thetis.Hosting;
 
-class Program
+partial class Program
 {
     static void Main()
     {
@@ -76,6 +76,7 @@ class Program
             }
             HandshakeDeadline(fixture, config);
             Transport(host, false);
+            ControlTransport(fixture, config);
             Lifecycle(fixture, config, false);
             string thumbprint = Environment.GetEnvironmentVariable("THETIS_HOST_TEST_CERT");
             Check(!string.IsNullOrEmpty(thumbprint), "Run harness with THETIS_HOST_TEST_CERT to prove real net48 TLS");
@@ -90,6 +91,7 @@ class Program
                 Check(HostingConfiguration.Load(validConfig).TlsEnabled, "Configured CurrentUser/My leaf did not enable TLS");
                 var secure = new CodeHost(fixture, new HostingConfiguration("thetis-test.home.arpa", certificates[0]));
                 Transport(secure, true);
+                ControlTransport(fixture, new HostingConfiguration("thetis-test.home.arpa", certificates[0]), true);
                 Lifecycle(fixture, new HostingConfiguration("thetis-test.home.arpa", certificates[0]), true);
             }
             System.Console.WriteLine("PASS: host routing, peer/host restrictions, allowlisted assets, config, HEAD and header/frame preservation.");

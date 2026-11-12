@@ -17,6 +17,7 @@ namespace Thetis.Hosting
         private readonly string root;
         private readonly HostingConfiguration configuration;
         private readonly bool radioInitialized;
+        private readonly RadioControlChannel control;
         private readonly HashSet<string> assets = new HashSet<string>(StringComparer.Ordinal);
         private readonly JObject build;
         private readonly object lifecycle = new object();
@@ -26,11 +27,12 @@ namespace Thetis.Hosting
         public int ActiveConnections { get { lock (lifecycle) return clients.Count; } }
         public bool IsStopped { get { lock (lifecycle) return stopped; } }
 
-        public CodeHost(string webRoot, HostingConfiguration configuration, bool radioInitialized = false)
+        public CodeHost(string webRoot, HostingConfiguration configuration, bool radioInitialized = false, RadioControlChannel control = null)
         {
             this.root = Path.GetFullPath(webRoot);
             this.configuration = configuration;
             this.radioInitialized = radioInitialized;
+            this.control = control;
             string manifestPath = Path.Combine(root, "code", "asset-manifest.json");
             if (File.Exists(manifestPath))
             {
@@ -90,6 +92,7 @@ namespace Thetis.Hosting
                 foreach (TcpClient client in clients) client.Close();
                 clients.Clear();
             }
+            control?.Dispose();
         }
 
         public void Dispose() { Stop(); }
@@ -190,16 +193,18 @@ namespace Thetis.Hosting
             {
                 string address = scheme + "://" + canonical + ":50001";
                 Json(stream, new JObject {
-                    ["mode"] = "foundation", ["baseUrl"] = address + "/code/",
+                    ["mode"] = control == null ? "foundation" : "code", ["baseUrl"] = address + "/code/",
                     ["webviewEndpoint"] = scheme + "://{{uuid}}." + canonical + ":50001/code/vscode/out/vs/workbench/contrib/webview/browser/pre/",
                     ["extensionHostEndpoint"] = scheme + "://{{uuid}}." + canonical + ":50001/code/vscode",
-                    ["diagnosticEndpoint"] = (tls ? "wss" : "ws") + "://" + canonical + ":50001/code/diagnostics", ["build"] = build.DeepClone()
+                    ["diagnosticEndpoint"] = (tls ? "wss" : "ws") + "://" + canonical + ":50001/code/diagnostics",
+                    ["controlEndpoint"] = control == null ? null : (tls ? "wss" : "ws") + "://" + canonical + ":50001/code/control", ["build"] = build.DeepClone()
                 }, head, cors);
                 return;
             }
             if (request.Path == "/code/health")
             {
-                Json(stream, new JObject { ["mode"] = "foundation", ["status"] = "ok", ["connections"] = ActiveConnections,
+                Json(stream, new JObject { ["mode"] = control == null ? "foundation" : "code", ["status"] = "ok", ["connections"] = ActiveConnections,
+                    ["backendLifecycle"] = control?.GetSnapshot().Lifecycle, ["controlConnections"] = control?.ActiveConnections ?? 0,
                     ["diagnosticConnections"] = Volatile.Read(ref diagnosticConnections), ["radioInitialized"] = radioInitialized, ["build"] = build.DeepClone() }, head, cors);
                 return;
             }
@@ -211,6 +216,14 @@ namespace Thetis.Hosting
                 if (stream.CanTimeout) stream.ReadTimeout = 60000;
                 try { DiagnosticWebSocket.Run(stream, request); }
                 finally { Interlocked.Decrement(ref diagnosticConnections); }
+                return;
+            }
+            if (request.Path == "/code/control")
+            {
+                if (control == null) { HostHttpResponse.Write(stream, 409, "Conflict", Encoding.UTF8.GetBytes("Operational Code frontend is not active."), head); return; }
+                if (head || !request.IsWebSocket || origin.Length == 0) { HostHttpResponse.Write(stream, 400, "Bad Request", head: head); return; }
+                if (stream.CanTimeout) stream.ReadTimeout = 45000;
+                control.Run(stream, request);
                 return;
             }
             if (request.IsWebSocket) { HostHttpResponse.Write(stream, 404, "Not Found", head: head); return; }

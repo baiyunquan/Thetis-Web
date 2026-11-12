@@ -828,6 +828,8 @@
     <Compile Include="Hosting\HostHttp.cs" />
     <Compile Include="Hosting\CodeHost.cs" />
     <Compile Include="Hosting\DiagnosticWebSocket.cs" />
+    <Compile Include="Hosting\HostWebSocket.cs" />
+    <Compile Include="Hosting\RadioControlChannel.cs" />
     <Compile Include="RadioServices\RadioContracts.cs" />
     <Compile Include="RadioServices\RadioApplication.cs" />
     <Compile Include="RadioServices\RadioCommandDispatcher.cs" />
